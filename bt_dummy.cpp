@@ -44,8 +44,12 @@ void bt_sendAvcrp(int key) {
   DEBUG("]\n");
 }
 
-void bt_slectCd(int cd) {
+void bt_selectCd(int cd) {
   DEBUG("[BT] selecting CD ");DEBUG(cd);DEBUG(" via SPP\n");
+}
+
+void bt_selectTrack(int track) {
+  DEBUG("[BT] selecting track ");DEBUG(track);DEBUG(" via SPP\n");
 }
 
 

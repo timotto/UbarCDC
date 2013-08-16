@@ -9,7 +9,7 @@
 #define CDC_MBUS
 //#define CDC_IBUS
 //#define CDC_VW
-#define CDC_BUS_TX  2
+#define CDC_BUS_TX  9
 #define CDC_BUS_RX  3
 
 //#define BT_RN52

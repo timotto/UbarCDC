@@ -17,7 +17,8 @@ void bt_loop();
 void bt_onConnection(bool connected);
 void bt_onStreaming(bool streaming);
 void bt_sendAvcrp(int key);
-void bt_slectCd(int cd);
+void bt_selectCd(int cd);
+void bt_selectTrack(int track);
 
 #endif // BT_H
 
