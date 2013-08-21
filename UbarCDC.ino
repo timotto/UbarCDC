@@ -2,8 +2,14 @@
 #include <TimerOne.h>
 #include <Readline.h>
 
-#define CDC_BUS_TX  9
+#define DISC_LAYOUT    0x000001575020ull
+#define CDC_BUS_TX  7
 #define CDC_BUS_RX  3
+#define BT_RX       8
+#define BT_TX       9
+#define BT_GPIO2    2
+#define BT_GPIO9    4
+
 AsyncMBus mBus(CDC_BUS_RX, CDC_BUS_TX, onMbusMessage);
 
 // The special disc was selected
@@ -19,9 +25,10 @@ bool bt_hfp = false;
 uint8_t bt_state = 0;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(57600);
   bt_setup();
   mBus.setup();
+  Serial.println("[UCDC] started");
 }
 
 void loop() {

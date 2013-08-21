@@ -1,11 +1,11 @@
+#define DEBUG_BT Serial.print
+
 #include <SoftwareSerial.h>
+#include "ConstStrings.h"
 
-SoftwareSerial bt_serial(10, 11); // RX, TX
+SoftwareSerial bt_serial(BT_RX, BT_TX); // RX, TX
 
-char *SEQ_SETUP[] = {"S|,02", "S-,Jaguar XJS-C", "SD,06", "SK,04", "SP,31337", "R,1"};
-int SEQ_SETUP_LEN = 6;
-
-bool bt_sendCommand(char *cmd, bool enter = true, bool exit = true);
+bool bt_sendCommand(const char *cmd, bool enter = true, bool exit = true);
 bool bt_enterCmdMode();
 bool bt_exitCmdMode();
 
@@ -13,90 +13,38 @@ ReadLine bt_readLine;
 uint32_t lastHi2Lo = 0;
 int gpio2 = 0;
 uint8_t lastState[2] = {0};
+int cmdModeDepth = 0;
 
 // bool set by bt_play/pause commands, also used in Q response in bt_loop()
 bool bt_shallPlay = false;
 
-void _bt_assertA2dpStateCmd(uint8_t state, char *cmd) {
-  if (bt_a2dp) {
-    if (bt_state == state) {
-      bt_sendCommand(cmd);
-    } else {
-      Serial.print("[BT] bt_state no match, want [");
-      Serial.print(state, DEC);
-      Serial.print("] have [");
-      Serial.print(bt_state, DEC);
-      Serial.println("]");
-    }
-  } else {
-    Serial.println("[BT] A2DP not connected");
-  }
-}
-
-void bt_play() {
-  bt_shallPlay = true;
-  _bt_assertA2dpStateCmd(0x3, "AP");
-}
-
-void bt_pause() {
-  bt_shallPlay = false;
-  _bt_assertA2dpStateCmd(0xd, "AP");
-}
-
-void bt_prev() {
-  bt_shallPlay = true;
-  _bt_assertA2dpStateCmd(0xd, "AT-");
-}
-
-void bt_next() {
-  bt_shallPlay = true;
-  _bt_assertA2dpStateCmd(0xd, "AT+");
-}
-
-void bt_visible() {
-  bt_sendCommand("@,1");
-}
-
-void bt_invisible() {
-  bt_sendCommand("@,0");
-}
-
-void bt_reconnect() {
-  bt_sendCommand("B");
-}
-
-void bt_moduleSetup() {
-  bt_sendCommands(100, SEQ_SETUP_LEN, SEQ_SETUP);
-}
-
 void bt_setup() {
-  pinMode(6, OUTPUT);
-  digitalWrite(6, HIGH);
-  pinMode(7, INPUT);
-  digitalWrite(7, LOW);
+  pinMode(BT_GPIO9, OUTPUT);
+  digitalWrite(BT_GPIO9, HIGH);
+  pinMode(BT_GPIO2, INPUT);
+  digitalWrite(BT_GPIO2, LOW);
   bt_serial.begin(9600);
 }
 
 void bt_loop() {
-  int n = digitalRead(7);
+  int n = digitalRead(BT_GPIO2);
   if (n != gpio2) {
     uint32_t now = millis();
     gpio2 = n;
-    Serial.print(now);
-    Serial.print(" GPIO2: ");Serial.println(gpio2);
+    DEBUG_BT(now);
+    DEBUG_BT(" GPIO2: ");DEBUG_BT(gpio2);DEBUG_BT("\n");
     if (n) {
       // pin went hi
       if (now <= (lastHi2Lo+100)) {
         // last hi to lo transision is less than 150ms, this is a state change
         
-        
         if(!bt_sendCommand("Q", true, false))
           return;
-
+        
         int lines = 1;
         do {
           char *line;
-          if (line=bt_readLine.feed(&bt_serial)) {
+          if ((line=bt_readLine.feed(&bt_serial))) {
             bt_iap = line[1] & 0x01;
             bt_spp = line[1] & 0x02;
             bt_a2dp = line[1] & 0x04;
@@ -111,8 +59,9 @@ void bt_loop() {
               bt_state = bt_state - 'A' + 10;
             } else bt_state = 0;
             
-            Serial.print("BT> ");
-            Serial.println(line);
+            DEBUG_BT("BT> ");
+            DEBUG_BT(line);
+            DEBUG_BT("\n");
             bt_dumpState();
             
             if (line[1] != lastState[0] || bt_state != lastState[1]) {
@@ -142,7 +91,63 @@ void bt_loop() {
   }
 }
 
-bool bt_sendCommands(int d, int argc, char **argv) {
+bool _bt_assertA2dpStateCmd(uint8_t state, const char *cmd) {
+  if (bt_a2dp) {
+    if (bt_state == state) {
+      bt_sendCommand(cmd);
+      return true;
+    } else {
+      DEBUG_BT("[BT] bt_state no match, want [");
+      DEBUG_BT(state, DEC);
+      DEBUG_BT("] have [");
+      DEBUG_BT(bt_state, DEC);
+      DEBUG_BT("]\n");
+    }
+  } else {
+    DEBUG_BT("[BT] A2DP not connected\n");
+  }
+  return false;
+}
+
+void bt_play() {
+  bt_shallPlay = true;
+  _bt_assertA2dpStateCmd(0x3, BT_CMD_PLAYPAUSE);
+}
+
+void bt_pause() {
+  bt_shallPlay = false;
+  _bt_assertA2dpStateCmd(0xd, BT_CMD_PLAYPAUSE);
+}
+
+void bt_prev() {
+  bt_shallPlay = true;
+  if(!_bt_assertA2dpStateCmd(0xd, BT_CMD_PREV))
+    _bt_assertA2dpStateCmd(0x3, BT_CMD_PREV);
+}
+
+void bt_next() {
+  bt_shallPlay = true;
+  if(!_bt_assertA2dpStateCmd(0xd, BT_CMD_NEXT))
+    _bt_assertA2dpStateCmd(0x3, BT_CMD_NEXT);
+}
+
+void bt_visible() {
+  bt_sendCommand(BT_CMD_VISIBLE);
+}
+
+void bt_invisible() {
+  bt_sendCommand(BT_CMD_INVISIBLE);
+}
+
+void bt_reconnect() {
+  bt_sendCommand(BT_CMD_RECONNECT);
+}
+
+void bt_moduleSetup() {
+  bt_sendCommands(100, SEQ_SETUP_LEN, SEQ_SETUP);
+}
+
+bool bt_sendCommands(int d, int argc, const char **argv) {
   if (argc<1)
     return true;
   
@@ -171,14 +176,14 @@ bool bt_sendCommands(int d, int argc, char **argv) {
   return true;
 }
 
-bool bt_sendCommand(char *cmd, bool enter, bool exit) {
+bool bt_sendCommand(const char *cmd, bool enter, bool exit) {
   if(enter && !bt_enterCmdMode())
     return false;
   
   bt_serial.print(cmd);
   bt_serial.write('\r');
-  Serial.print("<BT ");
-  Serial.println(cmd);
+//  Serial.print("<BT ");
+//  Serial.println(cmd);
   
   if (exit && !bt_exitCmdMode())
     return false;
@@ -186,47 +191,61 @@ bool bt_sendCommand(char *cmd, bool enter, bool exit) {
   return true;
 }
 
-// nada, gpio9 is lo by setup()
 bool bt_enterCmdMode() {
-  Serial.println("Entering command mode...");
+  if (cmdModeDepth) {
+    DEBUG_BT("Already in command mode...\n");
+    cmdModeDepth++;
+    return true;
+  }
+
+  DEBUG_BT("Entering command mode...\n");
   uint32_t now = millis();
-  digitalWrite(6, LOW);
+  digitalWrite(BT_GPIO9, LOW);
   do {
     char *line;
-    if (line=bt_readLine.feed(&bt_serial)) {
+    if ((line=bt_readLine.feed(&bt_serial))) {
       if (0 == strcmp("CMD", line))
         break;
       else {
-        Serial.println("unexpected line from BT:");
-        Serial.println(line);
+        DEBUG_BT("unexpected line from BT:\n");
+        DEBUG_BT(line);
+        DEBUG_BT("\n");
       }
     }
     
     if (now + 1000 < millis()) {
-      Serial.println("Timeout entering CMD mode");
+      DEBUG_BT("Timeout entering CMD mode\n");
+      digitalWrite(BT_GPIO9, HIGH);
       return false;
     }
   } while(1);
+  cmdModeDepth++;
   return true;
 };
 
 bool bt_exitCmdMode(){
-  Serial.println("Leaving command mode...");
+  cmdModeDepth--;
+  if (cmdModeDepth) {
+    DEBUG_BT("Not leaving command mode, nested...\n");
+    return true;
+  }
+  DEBUG_BT("Leaving command mode...\n");
   uint32_t now = millis();
-  digitalWrite(6, HIGH);
+  digitalWrite(BT_GPIO9, HIGH);
   do {
     char *line;
-    if (line=bt_readLine.feed(&bt_serial)) {
+    if ((line=bt_readLine.feed(&bt_serial))) {
       if (0 == strcmp("END", line))
         break;
       else {
-        Serial.println("unexpected line from BT:");
-        Serial.println(line);
+        DEBUG_BT("unexpected line from BT:\n");
+        DEBUG_BT(line);
+        DEBUG_BT("\n");
       }
     }
     
     if ((now + 1000) < millis()) {
-      Serial.println("Timeout leaving CMD mode");
+      DEBUG_BT("Timeout leaving CMD mode\n");
       return false;
     }
   } while(1);
