@@ -74,6 +74,7 @@ void onMbusMessage(uint64_t msg, int len) {
     } else if (nextTrack < currentTrack) {
 //      for(int i=currentTrack;i>=nextTrack;i--)
         bt_prev();
+        delay(100);
         bt_prev();
     } else bt_prev(); // same track again, just prev once to start from the beginning
 

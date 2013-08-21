@@ -1,6 +1,9 @@
+// https://github.com/rabinath/AsyncMBus
 #include <AsyncMBus.h>
-#include <TimerOne.h>
+// https://github.com/rabinath/Readline
 #include <Readline.h>
+// http://playground.arduino.cc/code/timer1
+#include <TimerOne.h>
 
 #define DISC_LAYOUT    0x000001575020ull
 #define CDC_BUS_TX  7
