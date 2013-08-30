@@ -1,4 +1,12 @@
 #ifdef CDC_MBUS
+
+// https://github.com/rabinath/AsyncMBus
+#include <AsyncMBus.h>
+// http://playground.arduino.cc/code/timer1
+#include <TimerOne.h>
+
+#define DISC_LAYOUT    0x000001575020ull
+
 AsyncMBus mBus(CDC_BUS_RX, CDC_BUS_TX, onMbusMessage);
 
 int currentTrack = 0;
