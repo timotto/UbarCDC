@@ -5,6 +5,9 @@
 // http://playground.arduino.cc/code/timer1
 #include <TimerOne.h>
 
+// custom bitbanger
+#define CDC_BUS_TX  7
+#define CDC_BUS_RX  3
 #define DISC_LAYOUT    0x000001575020ull
 
 AsyncMBus mBus(CDC_BUS_RX, CDC_BUS_TX, onMbusMessage);

@@ -1,9 +1,5 @@
-#define CDC_MBUS
-//#define CDC_IBUS
-
-// SoftwareSerial or custom bitbanger
-#define CDC_BUS_TX  7
-#define CDC_BUS_RX  3
+//#define CDC_MBUS
+#define CDC_IBUS
 
 // Bluetooth UART, SoftwareSerial
 #define BT_RX       8
@@ -22,7 +18,7 @@ bool bt_iap = false;
 bool bt_spp = false;
 bool bt_a2dp = false;
 bool bt_hfp = false;
-// Bluetooth connection state
+// Bluetooth connection state (RN-52)
 uint8_t bt_state = 0;
 
 void setup() {
