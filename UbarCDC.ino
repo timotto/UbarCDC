@@ -1,10 +1,6 @@
 #define CDC_MBUS
 //#define CDC_IBUS
 
-// Used in Console
-// https://github.com/rabinath/Readline
-#include <Readline.h>
-
 // SoftwareSerial or custom bitbanger
 #define CDC_BUS_TX  7
 #define CDC_BUS_RX  3

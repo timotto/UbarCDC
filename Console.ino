@@ -1,3 +1,6 @@
+// https://github.com/rabinath/Readline
+#include <Readline.h>
+
 ReadLine con_readLine;
 void con_loop() {
   char *line;

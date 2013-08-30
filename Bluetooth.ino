@@ -1,5 +1,7 @@
 #define DEBUG_BT Serial.print
 
+// https://github.com/rabinath/Readline
+#include <Readline.h>
 #include <SoftwareSerial.h>
 #include "ConstStrings.h"
 
