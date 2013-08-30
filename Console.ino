@@ -22,10 +22,12 @@ void con_loop() {
       bt_prev();
     } else if (0 == strcmp("next", line)) {
       bt_next();
+#ifdef CDC_MBUS
     } else if (0 == strncmp("mbus:", line, 5)) {
       injectMbus(line+5);
     } else if (0 == strncmp("cdc:", line, 4)) {
       injectCDC(line+4);
+#endif
     } else {
       return;
       Serial.println(" ERROR");

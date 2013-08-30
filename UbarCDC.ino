@@ -1,5 +1,7 @@
-#define CDC_MBUS
+//#define CDC_MBUS
+#define CDC_IBUS
 
+// Used in Console
 // https://github.com/rabinath/Readline
 #include <Readline.h>
 
@@ -9,12 +11,17 @@
 // http://playground.arduino.cc/code/timer1
 #include <TimerOne.h>
 #define DISC_LAYOUT    0x000001575020ull
-#define CDC_BUS_TX  7
-#define CDC_BUS_RX  3
 #endif
 
+// SoftwareSerial or custom bitbanger
+#define CDC_BUS_TX  7
+#define CDC_BUS_RX  3
+
+// Bluetooth UART, SoftwareSerial
 #define BT_RX       8
 #define BT_TX       9
+
+// RN-52 specific PINs
 #define BT_GPIO2    2
 #define BT_GPIO9    4
 
