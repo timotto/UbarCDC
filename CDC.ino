@@ -1,5 +1,16 @@
+#ifdef CDC_MBUS
+AsyncMBus mBus(CDC_BUS_RX, CDC_BUS_TX, onMbusMessage);
+
 int currentTrack = 0;
 int maxTracks = (DISC_LAYOUT >> 20 & 0xf) | (10 * (DISC_LAYOUT >> 24 & 0xf));
+
+void cdc_setup() {
+  mBus.setup();
+}
+
+void cdc_loop() {
+  mBus.loop();
+}
 
 // called from mBus.loop() method
 void onMbusMessage(uint64_t msg, int len) {
@@ -81,4 +92,39 @@ void onMbusMessage(uint64_t msg, int len) {
   }
 }
 
+void injectMbus(char *line) {
+  uint64_t msg;
+  int len;
+  if(parseuint64t(line, &msg, &len))
+    mBus.tx(msg);
+}
+
+void injectCDC(char *line) {
+  uint64_t msg;
+  int len;
+  if(parseuint64t(line, &msg, &len))
+    onMbusMessage(msg, len);
+}
+
+bool parseuint64t(char *line, uint64_t *msg, int *len) {
+  int n = strlen(line);
+  *len = n * 4;
+
+  *msg = 0;
+  for(int i=0;i<*len;i+=4) {
+    int idx = n - (i/4) - 1;
+    uint8_t val = line[idx];
+    if (val >= '0' && val <= '9') {
+      val = val - '0';
+    } else if (val >= 'a' && val <= 'f') {
+      val = val - 'a' + 10;
+    } else if (val >= 'A' && val <= 'F') {
+      val = val - 'A' + 10;
+    } else return false;
+    
+    *msg |= (uint64_t)val<<i;
+  }
+  return true;
+}
+#endif
 

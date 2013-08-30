@@ -1,19 +1,22 @@
-// https://github.com/rabinath/AsyncMBus
-#include <AsyncMBus.h>
+#define CDC_MBUS
+
 // https://github.com/rabinath/Readline
 #include <Readline.h>
+
+#ifdef CDC_MBUS
+// https://github.com/rabinath/AsyncMBus
+#include <AsyncMBus.h>
 // http://playground.arduino.cc/code/timer1
 #include <TimerOne.h>
-
 #define DISC_LAYOUT    0x000001575020ull
 #define CDC_BUS_TX  7
 #define CDC_BUS_RX  3
+#endif
+
 #define BT_RX       8
 #define BT_TX       9
 #define BT_GPIO2    2
 #define BT_GPIO9    4
-
-AsyncMBus mBus(CDC_BUS_RX, CDC_BUS_TX, onMbusMessage);
 
 // The special disc was selected
 bool active = false;
@@ -30,12 +33,12 @@ uint8_t bt_state = 0;
 void setup() {
   Serial.begin(57600);
   bt_setup();
-  mBus.setup();
+  cdc_setup();
   Serial.println("[UCDC] started");
 }
 
 void loop() {
-  mBus.loop();
+  cdc_loop();
   con_loop();
   bt_loop();
 }
