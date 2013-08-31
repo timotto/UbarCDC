@@ -1,5 +1,9 @@
+// TODO: remember last state when turned off if radio unit / cdc do the same
+
 //#define CDC_MBUS
 #define CDC_IBUS
+
+#define PWR_BT      3
 
 // Bluetooth UART, SoftwareSerial
 #define BT_RX       8
@@ -23,8 +27,8 @@ uint8_t bt_state = 0;
 
 void setup() {
   Serial.begin(57600);
-  bt_setup();
   cdc_setup();
+  bt_setup();
   Serial.println("[UCDC] started");
 }
 
@@ -34,7 +38,19 @@ void loop() {
   bt_loop();
 }
 
+void onPause() {
+  bt_disconnect();
+  bt_off();
+}
+
+void onResume() {
+  bt_on();
+  delay(200);
+  bt_reconnect();
+}
+
 void cdc_setActive(bool a) {
+  if (active == a)return;
   active = a;
   if (active) {
     Serial.println("[UCDC] active");
@@ -44,6 +60,7 @@ void cdc_setActive(bool a) {
 }
 
 void cdc_setPlaying(bool p) {
+  if (playing == p)return;
   playing = p;
   if (playing) {
     Serial.println("[UCDC] playing");

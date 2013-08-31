@@ -17,6 +17,9 @@ int maxTracks = (DISC_LAYOUT >> 20 & 0xf) | (10 * (DISC_LAYOUT >> 24 & 0xf));
 
 void cdc_setup() {
   mBus.setup();
+  
+  // has no ignition detection
+  onResume();
 }
 
 void cdc_loop() {

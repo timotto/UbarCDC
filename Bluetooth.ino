@@ -25,7 +25,17 @@ void bt_setup() {
   digitalWrite(BT_GPIO9, HIGH);
   pinMode(BT_GPIO2, INPUT);
   digitalWrite(BT_GPIO2, LOW);
+  pinMode(PWR_BT, OUTPUT);
+  digitalWrite(PWR_BT, LOW);
   bt_serial.begin(9600);
+}
+
+void bt_on() {
+  digitalWrite(PWR_BT, HIGH);
+}
+
+void bt_off() {
+  digitalWrite(PWR_BT, LOW);
 }
 
 void bt_loop() {
@@ -145,6 +155,10 @@ void bt_reconnect() {
   bt_sendCommand(BT_CMD_RECONNECT);
 }
 
+void bt_disconnect() {
+  bt_sendCommand(BT_CMD_DISCONNECT);
+}
+
 void bt_moduleSetup() {
   bt_sendCommands(100, SEQ_SETUP_LEN, SEQ_SETUP);
 }
@@ -201,6 +215,7 @@ bool bt_enterCmdMode() {
   }
 
   DEBUG_BT("Entering command mode...\n");
+  bt_serial.listen();
   uint32_t now = millis();
   digitalWrite(BT_GPIO9, LOW);
   do {
