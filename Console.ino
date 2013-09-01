@@ -6,8 +6,8 @@ void con_loop() {
   char *line;
 
   if ((line = con_readLine.feed(&Serial))) {
-    Serial.print("CON> ");
-    Serial.print(line);
+//    Serial.print("CON> ");
+//    Serial.print(line);
     if (0 == strcmp("setup", line)) {
       bt_moduleSetup();
     } else if (0 == strcmp("visible", line)) {
@@ -33,9 +33,9 @@ void con_loop() {
 #endif
     } else {
       return;
-      Serial.println(" ERROR");
+//      Serial.println(" ERROR");
     }
-    Serial.println(" OK");
+//    Serial.println(" OK");
   }
 }
 
