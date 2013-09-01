@@ -39,6 +39,7 @@ void bt_off() {
 }
 
 void bt_loop() {
+  bool stateChanged = false;
   int n = digitalRead(BT_GPIO2);
   if (n != gpio2) {
     uint32_t now = millis();
@@ -50,57 +51,63 @@ void bt_loop() {
       if (now <= (lastHi2Lo+100)) {
         // last hi to lo transision is less than 150ms, this is a state change
         
-        if(!bt_sendCommand("Q", true, false))
-          return;
+        stateChanged = true;
+        _bt_queryState();
         
-        int lines = 1;
-        do {
-          char *line;
-          if ((line=bt_readLine.feed(&bt_serial))) {
-            bt_iap = line[1] & 0x01;
-            bt_spp = line[1] & 0x02;
-            bt_a2dp = line[1] & 0x04;
-            bt_hfp = line[1] & 0x08;
-            
-            bt_state = line[3];
-            if (bt_state >= '0' && bt_state <= '9') {
-              bt_state = bt_state - '0';
-            } else if (bt_state >= 'a' && bt_state <= 'f') {
-              bt_state = bt_state - 'a' + 10;
-            } else if (bt_state >= 'A' && bt_state <= 'F') {
-              bt_state = bt_state - 'A' + 10;
-            } else bt_state = 0;
-            
-            DEBUG_BT("BT> ");
-            DEBUG_BT(line);
-            DEBUG_BT("\n");
-            bt_dumpState();
-            
-            if (line[1] != lastState[0] || bt_state != lastState[1]) {
-              lastState[0] = line[1];
-              lastState[1] = bt_state;
-              bt_stateChanged();
-            }
-            
-            if (bt_a2dp && bt_shallPlay && bt_state != 'D')
-              bt_play();
-            
-            if (--lines == 0)
-              break;
-          }
-          if (now + 1000 < millis()) {
-            Serial.println("Timeout requesting status");
-            return;
-          }
-        } while(1);
-
-        bt_exitCmdMode();
       }
     } else {
       // pin went lo
       lastHi2Lo = now;
     }
   }
+}
+
+void _bt_queryState() {
+  if(!bt_sendCommand("Q", true, false))
+    return;
+  
+  int lines = 1;
+  do {
+    char *line;
+    if ((line=bt_readLine.feed(&bt_serial))) {
+      bt_iap = line[1] & 0x01;
+      bt_spp = line[1] & 0x02;
+      bt_a2dp = line[1] & 0x04;
+      bt_hfp = line[1] & 0x08;
+      
+      bt_state = line[3];
+      if (bt_state >= '0' && bt_state <= '9') {
+        bt_state = bt_state - '0';
+      } else if (bt_state >= 'a' && bt_state <= 'f') {
+        bt_state = bt_state - 'a' + 10;
+      } else if (bt_state >= 'A' && bt_state <= 'F') {
+        bt_state = bt_state - 'A' + 10;
+      } else bt_state = 0;
+      
+      DEBUG_BT("BT> ");
+      DEBUG_BT(line);
+      DEBUG_BT("\n");
+      bt_dumpState();
+      
+      if (line[1] != lastState[0] || bt_state != lastState[1]) {
+        lastState[0] = line[1];
+        lastState[1] = bt_state;
+        bt_stateChanged();
+      }
+      
+      if (bt_a2dp && bt_shallPlay && bt_state != 'D')
+        bt_play();
+      
+      if (--lines == 0)
+        break;
+    }
+    if (now + 1000 < millis()) {
+      Serial.println("Timeout requesting status");
+      break;
+    }
+  } while(1);
+
+  bt_exitCmdMode();
 }
 
 bool _bt_assertA2dpStateCmd(uint8_t state, const char *cmd) {
