@@ -52,7 +52,7 @@ void bt_loop() {
         // last hi to lo transision is less than 150ms, this is a state change
         
         stateChanged = true;
-        _bt_queryState();
+        _bt_queryState(now);
         
       }
     } else {
@@ -62,7 +62,7 @@ void bt_loop() {
   }
 }
 
-void _bt_queryState() {
+void _bt_queryState(uint32_t now) {
   if(!bt_sendCommand("Q", true, false))
     return;
   

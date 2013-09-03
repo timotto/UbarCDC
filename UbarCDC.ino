@@ -29,6 +29,7 @@ void setup() {
   Serial.begin(57600);
   cdc_setup();
   bt_setup();
+  bt_on();
   Serial.println("[UCDC] started");
 }
 
@@ -40,6 +41,7 @@ void loop() {
 
 void onPause() {
   bt_disconnect();
+  delay(200);
   bt_off();
 }
 

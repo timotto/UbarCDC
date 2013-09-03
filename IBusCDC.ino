@@ -91,21 +91,25 @@ void cdc_onPause() {
 
 const char inAuxData[] = {0x23, 0x62, 0x10, 'A', 'U', 'X'};
 void _ibus_handleFrame() {
+  
+  uint8_t from = rxFrame->from();
+  uint8_t to = rxFrame->to();
+  uint8_t dlen = rxFrame->len();
 
-  DEBUG_CDC("IBus Frame from [");
-  DEBUG_CDC(rxFrame->from(), HEX);
-  DEBUG_CDC("] to [");
-  DEBUG_CDC(rxFrame->to(), HEX);
-  DEBUG_CDC("]\n");
+//  DEBUG_CDC("IBus Frame from [");
+//  DEBUG_CDC(from, HEX);
+//  DEBUG_CDC("] to [");
+//  DEBUG_CDC(to, HEX);
+//  DEBUG_CDC("]\n");
 
   uint8_t *frameData = rxFrame->data();
-  switch(rxFrame->to()){
+  switch(to){
     case 0x3b: // GT
 //      DEBUG_CDC("to GT\n");
       switch(frameData[0]) {
         case 0x23: // display text
 //          DEBUG_CDC("display text\n");
-          if (rxFrame->len() >= 5) { // ll >= 7!
+          if (dlen >= 5) { // ll >= 7!
             bool match = true;
             for(int i=0;i<6;i++)
               if (frameData[i] != inAuxData[i]) {
@@ -131,27 +135,27 @@ void _ibus_handleFrame() {
       break;
   }
   
-  switch(rxFrame->from()) {
+  switch(from) {
     case 0x80: //IKE
       DEBUG_CDC("from IKE\n");
-      switch(rxFrame->to()) {
+      switch(to) {
         case 0xBF: //GLO
-          DEBUG_CDC("to GLO, len=");
-          DEBUG_CDC(rxFrame->len());
-          DEBUG_CDC("\n");
-          if (rxFrame->len() == 2) { //ll = 04!
-            uint16_t code = (uint16_t)rxFrame->data()[0] << 8 | rxFrame->data()[1];
-            DEBUG_CDC("Code: ");
-            DEBUG_CDC(code);
-            DEBUG_CDC("\n");
-            switch(code) {
-              case DD_IG_OFF:
+//          DEBUG_CDC("to GLO, len=");
+//          DEBUG_CDC(rxFrame->len());
+//          DEBUG_CDC("\n");
+          if (dlen == 2 && frameData[0] == 0x11) { //ll = 04!
+//            uint16_t code = (uint16_t)rxFrame->data()[0] << 8 | rxFrame->data()[1];
+//            DEBUG_CDC("Code: ");
+//            DEBUG_CDC(code);
+//            DEBUG_CDC("\n");
+            switch(frameData[1]) {
+              case 0x00:
                 if (ignition) {
                   ignition=false;
                   cdc_onPause();
                 }
                 return;
-              case DD_IG_ACC:
+              default:
                 if(!ignition) {
                   ignition = true;
                   cdc_onResume();

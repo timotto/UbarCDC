@@ -31,6 +31,10 @@ void con_loop() {
     } else if (0 == strncmp("cdc:", line, 4)) {
       injectCDC(line+4);
 #endif
+    } else if (0 == strcmp("onResume", line)) {
+      onResume();
+    } else if (0 == strcmp("onPause", line)) {
+      onPause();
     } else {
       return;
 //      Serial.println(" ERROR");
