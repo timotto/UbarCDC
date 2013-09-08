@@ -5,7 +5,7 @@ ReadLine con_readLine;
 void con_loop() {
   char *line;
 
-  if ((line = con_readLine.feed(&Serial))) {
+  if (false && (line = con_readLine.feed(&Serial))) {
 //    Serial.print("CON> ");
 //    Serial.print(line);
     if (0 == strcmp("setup", line)) {
@@ -15,6 +15,7 @@ void con_loop() {
     } else if (0 == strcmp("invisible", line)) {
       bt_invisible();
     } else if (0 == strcmp("disconnect", line)) {
+      bt_disconnect();
     } else if (0 == strcmp("reconnect", line)) {
       bt_reconnect();
     } else if (0 == strcmp("play", line)) {
@@ -25,6 +26,10 @@ void con_loop() {
       bt_prev();
     } else if (0 == strcmp("next", line)) {
       bt_next();
+    } else if (0 == strcmp("bton", line)) {
+      bt_on();
+    } else if (0 == strcmp("btoff", line)) {
+      bt_off();
 #ifdef CDC_MBUS
     } else if (0 == strncmp("mbus:", line, 5)) {
       injectMbus(line+5);
@@ -36,10 +41,10 @@ void con_loop() {
     } else if (0 == strcmp("onPause", line)) {
       onPause();
     } else {
+      Serial.println("ERROR");
       return;
-//      Serial.println(" ERROR");
     }
-//    Serial.println(" OK");
+    Serial.println("OK");
   }
 }
 

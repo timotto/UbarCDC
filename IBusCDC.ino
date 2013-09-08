@@ -29,20 +29,24 @@
 void _ibus_tx(uint8_t c);
 void _ibus_handleFrame();
 
-SoftwareSerial ibus_serial(CDC_BUS_RX, CDC_BUS_TX, false, 'E');
+//SoftwareSerial ibus_serial(CDC_BUS_RX, CDC_BUS_TX, false, 'E');
+SoftwareSerial ibus_serial(CDC_BUS_RX, CDC_BUS_TX);
 IBUS_Protocol infotainmentBus(_ibus_tx);
 IBUS_Frame *rxFrame;
 bool inAux = false;
 bool ignition = false;
 
 void cdc_setup() {
+//  Serial2.begin(9600);
   ibus_serial.begin(9600);
   pinMode(13, OUTPUT);
 }
 
 void cdc_loop() {
-  ibus_serial.listen();
+//  ibus_serial.listen();
+//  while(Serial2.available()) {
   while(ibus_serial.available()) {
+//    uint8_t c = Serial2.read();
     uint8_t c = ibus_serial.read();
     infotainmentBus.feed(c);
     if ( (rxFrame = infotainmentBus.getFrame()) != NULL) {
@@ -218,6 +222,7 @@ void _ibus_handleButton(uint16_t btn) {
 
 void _ibus_tx(uint8_t c) {
   ibus_serial.write(c);
+//  Serial2.write(c);
 }
 
 static int blinkState = 0;

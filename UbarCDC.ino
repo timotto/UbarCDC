@@ -1,13 +1,17 @@
+
 // TODO: remember last state when turned off if radio unit / cdc do the same
 
 //#define CDC_MBUS
 #define CDC_IBUS
+#define BT_RN52_LIB
+//#define BT_RN52
+//#define BT_OVC3860
 
 #define PWR_BT      3
 
 // Bluetooth UART, SoftwareSerial
-#define BT_RX       8
-#define BT_TX       9
+//#define BT_RX       8
+//#define BT_TX       9
 
 // RN-52 specific PINs
 #define BT_GPIO2    2
@@ -26,11 +30,11 @@ bool bt_hfp = false;
 uint8_t bt_state = 0;
 
 void setup() {
-  Serial.begin(57600);
+  Serial.begin(9600);
   cdc_setup();
   bt_setup();
   bt_on();
-  Serial.println("[UCDC] started");
+//  Serial.println("[UCDC] started");
 }
 
 void loop() {
