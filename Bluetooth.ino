@@ -27,10 +27,6 @@ void bt_setup() {
   digitalWrite(BT_GPIO9, HIGH);
   pinMode(BT_GPIO2, INPUT);
   digitalWrite(BT_GPIO2, LOW);
-  pinMode(PWR_BT, OUTPUT);
-  digitalWrite(PWR_BT, LOW);
-//  Serial2.begin(9600);
-//  bt_serial.begin(9600);
 }
 
 void bt_loop() {

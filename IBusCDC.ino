@@ -1,6 +1,7 @@
 #ifdef CDC_IBUS
 
-#define DEBUG_CDC Serial.print
+//#define DEBUG_CDC(x) Serial.print(x)
+#define DEBUG_CDC
 
 // SoftwareSerial
 #define CDC_BUS_TX  12
@@ -8,7 +9,7 @@
 
 #include <EEPROM.h>
 #include <IBUS_Protocol.h>
-#include <SoftwareSerial.h>
+#include <AltSoftSerial.h>
 
 //Ignition status, Off:
 //80 04 BF 11 00 2A
@@ -18,6 +19,12 @@
 //
 #define BTN_BMBT_LEFT    0x4810
 #define BTN_BMBT_RIGHT   0x4800
+#define BTN_BMBT_CD1     0x4811
+#define BTN_BMBT_CD2     0x4801
+#define BTN_BMBT_CD3     0x4812
+#define BTN_BMBT_CD4     0x4802
+#define BTN_BMBT_CD5     0x4813
+#define BTN_BMBT_CD6     0x4803
 #define BTN_MFL_UP       0x3B01
 #define BTN_MFL_DOWN     0x3B08
 #define BTN_PRESS        0
@@ -29,28 +36,21 @@
 void _ibus_tx(uint8_t c);
 void _ibus_handleFrame();
 
-//SoftwareSerial ibus_serial(CDC_BUS_RX, CDC_BUS_TX, false, 'E');
-SoftwareSerial ibus_serial(CDC_BUS_RX, CDC_BUS_TX);
+AltSoftSerial ibus_serial;
 IBUS_Protocol infotainmentBus(_ibus_tx);
 IBUS_Frame *rxFrame;
-bool inAux = false;
-bool ignition = false;
+bool inAux = true;
+bool ignition = true;
 
 void cdc_setup() {
-//  Serial2.begin(9600);
-  ibus_serial.begin(9600);
-  pinMode(13, OUTPUT);
+  ibus_serial.begin(9600, SERIAL_8E1);
 }
 
 void cdc_loop() {
-//  ibus_serial.listen();
-//  while(Serial2.available()) {
   while(ibus_serial.available()) {
-//    uint8_t c = Serial2.read();
     uint8_t c = ibus_serial.read();
     infotainmentBus.feed(c);
     if ( (rxFrame = infotainmentBus.getFrame()) != NULL) {
-      blinkLED();
       _ibus_handleFrame();
     }
   }
@@ -76,20 +76,10 @@ void cdc_onResume() {
 
 void cdc_onPause() {
   // Kl.15 off
-  // TODO: save inAux state
   if (inAux) {
     cdc_setPlaying(false);
     cdc_setActive(false);
   }
-  int addr = 0;
-  // magic
-  EEPROM.write(addr++, 'U');
-  EEPROM.write(addr++, 'b');
-  EEPROM.write(addr++, 'r');
-  EEPROM.write(addr++, 'C');
-  // data
-  EEPROM.write(addr++, inAux);
-  
   onPause();
 }
 
@@ -132,6 +122,14 @@ void _ibus_handleFrame() {
               cdc_setActive(match);
               cdc_setPlaying(match);
               inAux = match;
+              int addr = 0;
+              // magic
+              EEPROM.write(addr++, 'U');
+              EEPROM.write(addr++, 'b');
+              EEPROM.write(addr++, 'r');
+              EEPROM.write(addr++, 'C');
+              // data
+              EEPROM.write(addr++, inAux);
             }
           }
           return;
@@ -187,6 +185,7 @@ void _ibus_handleFrame() {
   }
 }
 
+int prev_state = 0;
 void _ibus_handleButton(uint16_t btn) {
 //  if(!inAux)return;
   int code = 0, state = 0;
@@ -201,35 +200,50 @@ void _ibus_handleButton(uint16_t btn) {
       break;
   }
   
-  Serial.print("BTN, code:");
-  Serial.print(code, HEX);
-  Serial.print(", state: ");
-  Serial.println(state, HEX);
+  DEBUG_CDC("BTN, code:");
+  DEBUG_CDC(code, HEX);
+  DEBUG_CDC(", state: ");
+  DEBUG_CDC(state, HEX);
 
   if (state == BTN_RELEASE) {
-    switch(code) {
-      case BTN_BMBT_LEFT:
-      case BTN_MFL_DOWN:
-        bt_prev();
-        break;
-      case BTN_BMBT_RIGHT:
-      case BTN_MFL_UP:
-        bt_next();
-        break;
+    if (prev_state == BTN_PRESS) {
+      switch(code) {
+        case BTN_BMBT_LEFT:
+        case BTN_MFL_DOWN:
+          bt_prev();
+          break;
+        case BTN_BMBT_RIGHT:
+        case BTN_MFL_UP:
+          bt_next();
+          break;
+        case BTN_BMBT_CD1:
+          cdc_select(1);
+          break;
+        case BTN_BMBT_CD2:
+          cdc_select(2);
+          break;
+        case BTN_BMBT_CD3:
+          cdc_select(3);
+          break;
+        case BTN_BMBT_CD4:
+          cdc_select(4);
+          break;
+        case BTN_BMBT_CD5:
+          cdc_select(5);
+          break;
+        case BTN_BMBT_CD6:
+          cdc_select(6);
+          break;
+      }
+    } else {
+      // ffwd / rwd
     }
-  }
+  } else prev_state = state;
 }
 
 void _ibus_tx(uint8_t c) {
   ibus_serial.write(c);
-//  Serial2.write(c);
 }
-
-static int blinkState = 0;
-static void blinkLED() {
-  blinkState = 1 - blinkState;
-  digitalWrite(13, blinkState);
-}
-
+void bus_tx(uint8_t c) {_ibus_tx(c);}
 #endif
 

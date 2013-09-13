@@ -1,13 +1,12 @@
+//#define DEBUG(x) Serial.print(x)
+#define DEBUG(x)
 
-// TODO: remember last state when turned off if radio unit / cdc do the same
-
-//#define CDC_MBUS
 #define CDC_IBUS
 #define BT_RN52_LIB
+#define SPP_JSON
+//#define CDC_MBUS
 //#define BT_RN52
 //#define BT_OVC3860
-
-#define PWR_BT      3
 
 // Bluetooth UART, SoftwareSerial
 //#define BT_RX       8
@@ -18,9 +17,9 @@
 #define BT_GPIO9    4
 
 // The special disc was selected
-bool active = false;
+bool active = true;
 // Audio is playing
-bool playing = false;
+bool playing = true;
 // Bluetooth profile connected
 bool bt_iap = false;
 bool bt_spp = false;
@@ -29,50 +28,70 @@ bool bt_hfp = false;
 // Bluetooth connection state (RN-52)
 uint8_t bt_state = 0;
 
+char artist[32] = {0};
+char title[32] = {0};
+char album[32] = {0};
+
 void setup() {
+  pinMode(3, INPUT);
+  digitalWrite(3, HIGH);
   Serial.begin(9600);
   cdc_setup();
   bt_setup();
-  bt_on();
-//  Serial.println("[UCDC] started");
+  DEBUG("[UCDC] started\n");
 }
 
 void loop() {
+
+//  con_loop(); // Serial is owned by Bluetooth now
   cdc_loop();
-  con_loop();
   bt_loop();
+  
 }
 
+uint8_t MSG_HELLO[] = {0xb0,0x05,0x0b,0x51,0x11,0x11,0xef};
+uint8_t MSG_BYE[] = {0xbe, 0x04, 0xaf, 0x11, 0x11, 0x15};
+
+/**
+ * e.g. ignition is turned off, radio unit shuts down
+ */
 void onPause() {
   bt_disconnect();
-  delay(200);
-  bt_off();
 }
 
+/**
+ * e.g. ignition is turned on, radio unit starts up
+ */
 void onResume() {
-  bt_on();
-  delay(200);
   bt_reconnect();
 }
 
+/**
+ * UbarCDC has been chosen for audio output by the radio unit
+ * or not (bool a)
+ */
 void cdc_setActive(bool a) {
   if (active == a)return;
   active = a;
   if (active) {
-    Serial.println("[UCDC] active");
+    DEBUG("[UCDC] active\n");
   } else {
-    Serial.println("[UCDC] not active");
+    DEBUG("[UCDC] not active\n");
   }
 }
 
+/**
+ * UbarCDC has been chosen to start playing music
+ * or not (bool p)
+ */
 void cdc_setPlaying(bool p) {
   if (playing == p)return;
   playing = p;
   if (playing) {
-    Serial.println("[UCDC] playing");
+    DEBUG("[UCDC] playing\n");
     bt_play();
   } else {
-    Serial.println("[UCDC] not playing");
+    DEBUG("[UCDC] not playing\n");
     bt_pause();
   }
 }

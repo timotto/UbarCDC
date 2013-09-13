@@ -32,10 +32,13 @@ const char *BT_O_STATE_PAIRING_OFF = "IJ2";
 
 #endif
 
-#ifdef BT_RN52
+#if defined(BT_RN52) || defined(BT_RN52_LIB)
 //const char *SEQ_SETUP[] = {"S|,02", "S-,Jaguar XJS-C", "SD,04", "SK,04", "SP,31337", "R,1"};
-const char *SEQ_SETUP[] = {"S|,02", "S-,BMW Z4", "SD,04", "SK,04", "SP,31337", "R,1"};
-int SEQ_SETUP_LEN = 6;
+const char *SEQ_SETUP[] = {"S|,02", "SP,80085", "SA,4", "SC,200420", "S-,BMW Z4", "SD,06", "SK,06", "R,1"};
+int SEQ_SETUP_LEN = 8;
+#endif
+
+#ifdef BT_RN52
 const char *BT_CMD_PLAYPAUSE = "AP";
 const char *BT_CMD_PREV = "AT-";
 const char *BT_CMD_NEXT = "AT+";

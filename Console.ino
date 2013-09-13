@@ -5,9 +5,7 @@ ReadLine con_readLine;
 void con_loop() {
   char *line;
 
-  if (false && (line = con_readLine.feed(&Serial))) {
-//    Serial.print("CON> ");
-//    Serial.print(line);
+  if (line = con_readLine.feed(&Serial)) {
     if (0 == strcmp("setup", line)) {
       bt_moduleSetup();
     } else if (0 == strcmp("visible", line)) {
@@ -26,10 +24,6 @@ void con_loop() {
       bt_prev();
     } else if (0 == strcmp("next", line)) {
       bt_next();
-    } else if (0 == strcmp("bton", line)) {
-      bt_on();
-    } else if (0 == strcmp("btoff", line)) {
-      bt_off();
 #ifdef CDC_MBUS
     } else if (0 == strncmp("mbus:", line, 5)) {
       injectMbus(line+5);
