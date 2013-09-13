@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">UbarCDC</string>
+    <string name="title_paired_devices">Paired devices</string>
+    <string name="no_bluetooth">No Bluetooth available</string>
+    <string name="none_paired">No paired devices found</string>
+</resources>

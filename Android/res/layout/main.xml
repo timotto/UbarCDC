@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent"
+        >
+
+    <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Mapped playlists:"
+            />
+
+    <Button android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/cd1"
+            android:textAlignment="viewStart"
+            android:text="1: " />
+    <Button android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/cd2"
+            android:textAlignment="viewStart"
+            android:text="2: " />
+    <Button android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/cd3"
+            android:textAlignment="viewStart"
+            android:text="3: " />
+    <Button android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/cd4"
+            android:textAlignment="viewStart"
+            android:text="4: " />
+    <Button android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/cd5"
+            android:textAlignment="viewStart"
+            android:text="5: " />
+    <Button android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/cd6"
+            android:textAlignment="viewStart"
+            android:text="6: " />
+
+</LinearLayout>
+
