@@ -21,6 +21,8 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity android:name=".MusicSearchActivity">
+        </activity>
 
         <receiver android:name=".BluetoothStateReceiver">
             <intent-filter>
@@ -29,8 +31,22 @@
                 <action android:name="android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
+        <receiver android:name=".CDCEventReceiver">
+            <intent-filter>
+                <action android:name="com.ubergrund.ubarcdc.CDC_EVENT" />
+            </intent-filter>
+        </receiver>
 
         <service android:name=".UbarCDCService"/>
+        <service android:name=".UbarAccService"
+                 android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                    android:name="android.accessibilityservice"
+                    android:resource="@xml/rcaccconf" />
+        </service>
 
     </application>
 </manifest> 

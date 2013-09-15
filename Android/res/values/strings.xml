@@ -4,4 +4,5 @@
     <string name="title_paired_devices">Paired devices</string>
     <string name="no_bluetooth">No Bluetooth available</string>
     <string name="none_paired">No paired devices found</string>
+    <string name="search_hint">Title, artist, album...</string>
 </resources>

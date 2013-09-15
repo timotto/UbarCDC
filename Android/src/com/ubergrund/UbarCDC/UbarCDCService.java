@@ -3,11 +3,8 @@ package com.ubergrund.UbarCDC;
 import android.app.Service;
 import android.bluetooth.*;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.os.ParcelUuid;
-import android.os.PowerManager;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 import java.io.DataInputStream;
@@ -20,6 +17,11 @@ import java.util.UUID;
  * User: Tim
  * Date: 8/31/13
  * Time: 8:32 PM
+ *
+ * This one works:
+ *  adb shell am start --activity-clear-task -a com.google.android.music.PLAY -e storeId Bqtgsu6zuroqn3r3bza3ltaissy
+ *
+ * Now I need to browse the MusicContent provider for storeId and album_name
  */
 public class UbarCDCService extends Service implements BluetoothProfile.ServiceListener {
 
@@ -173,20 +175,14 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
                             arg = in.readByte();
                             Log.d(TAG, "Got disc select ("+arg+")");
 
-                            final SharedPreferences p = PreferenceManager.getDefaultSharedPreferences(UbarCDCService.this);
-                            final String listId = p.getString("disc_" + arg + "_id", null);
+//                            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+//                            final PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, TAG);
+//                            wl.acquire(10000);
 
-                            if (listId != null) {
-                                PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-                                final PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, TAG);
-                                wl.acquire(10000);
+                            final Intent testIntent = new Intent("com.ubergrund.ubarcdc.CDC_EVENT");
+                            testIntent.putExtra(CDCEventReceiver.EXTRA_BUTTON, String.valueOf(arg));
+                            sendBroadcast(testIntent);
 
-                                final Intent musicIntent = new Intent(Intent.ACTION_VIEW);
-                                musicIntent.setType("vnd.android.cursor.dir/vnd.google.music.playlist");
-                                musicIntent.putExtra("playlistId", listId);
-                                musicIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(musicIntent);
-                            }
                             break;
                     }
                 }

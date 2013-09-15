@@ -12,13 +12,34 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 
 public class UbarCDC extends Activity {
+
+    /**
+     * content://com.google.android.music.MusicContent/album/store:
+     * -album_artist,album_art,isAllLocal,artworkUrl,SongCount,album_year,
+     * -hasLocal,hasRemote,HasDifferentTrackArtists,album_artist_sort,
+     * -hasAny,KeepOnId,album_sort,StoreAlbumId,album_id,hasPersistNautilus,
+     * -_id,_count,keeponSongCount,album_name,album_artist_id,
+     * -keeponDownloadedSongCount,ArtistMetajamId
+     *
+     *
+     * content://com.google.android.music.MusicContent/playlists/suggested
+     * -isAllLocal,playlist_owner_name,hasLocal,hasRemote,hasAny,KeepOnId,
+     * -playlist_art_url,playlist_share_token,_id,_count,playlist_owner_profile_photo_url,
+     * -keeponSongCount,playlist_description,playlist_type,playlist_id,keeponDownloadedSongCount,playlist_name
+     *
+     *
+     *
+     */
 
     private static final String TAG = "UbarCDC/UbarCDC";
     private static final int buttonsIds[] = new int[]{R.id.cd1, R.id.cd2, R.id.cd3, R.id.cd4, R.id.cd5, R.id.cd6};
     private final Button buttons[] = new Button[6];
     private Button set = null;
+    private boolean testMode = false;
 
     /**
      * Called when the activity is first created.
@@ -27,6 +48,12 @@ public class UbarCDC extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+        ((CheckBox)findViewById(R.id.test)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                testMode = isChecked;
+            }
+        });
         for(int i=0;i<buttonsIds.length;i++)
             setupButton(i, buttonsIds[i]);
 
@@ -44,10 +71,20 @@ public class UbarCDC extends Activity {
     private final View.OnClickListener selectDiscListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
+            if (testMode) {
+                final int disc = (Integer)v.getTag() + 1;
+                final Intent testIntent = new Intent("com.ubergrund.ubarcdc.CDC_EVENT");
+                testIntent.putExtra(CDCEventReceiver.EXTRA_BUTTON, String.valueOf(disc));
+                sendBroadcast(testIntent);
+                return;
+            }
             set = (Button) v;
-            final Intent intent = new Intent();
-            intent.setClassName("com.google.android.music", "com.google.android.music.ui.CreatePlaylistShortcutActivity");
-            startActivityForResult(intent, 123);
+//            final Intent intent = new Intent();
+//            intent.setClassName("com.google.android.music", "com.google.android.music.ui.CreatePlaylistShortcutActivity");
+//            startActivityForResult(intent, 123);
+
+            final Intent intent = new Intent(UbarCDC.this, MusicSearchActivity.class);
+            startActivityForResult(intent, 321);
         }
     };
 
@@ -55,11 +92,33 @@ public class UbarCDC extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_CANCELED)return;
 
+        if (321 == requestCode) {
+            String playlistName = data.getStringExtra("suggest_text_1");
+            if (playlistName==null||playlistName.trim().equals(""))
+                playlistName = data.getStringExtra("suggest_text_2");
+            final String playlistId = data.getData().toString();
+
+            final int disc = (Integer)set.getTag() + 1;
+            Log.d(TAG, "assign ["+playlistName+"]/["+playlistId+"] to CD ["+ disc +"]");
+            final SharedPreferences.Editor e = PreferenceManager.getDefaultSharedPreferences(this).edit();
+
+            e.putString("disc_"+disc+"_name", playlistName);
+            e.putString("disc_"+disc+"_id", playlistId);
+            e.commit();
+            redrawButtons();
+        }
+
         if (123 == requestCode) {
             final String playlistName = data.getStringExtra("android.intent.extra.shortcut.NAME");
 
             final Intent shortcut = data.getParcelableExtra("android.intent.extra.shortcut.INTENT");
             if (shortcut==null)return;
+
+            Log.d(TAG, "Shortcut: ["+shortcut+"]");
+            for(String key : shortcut.getExtras().keySet()) {
+                final Object o = shortcut.getExtras().get(key);
+                Log.d(TAG, "["+key+"] = ["+ o +"]");
+            }
 
             final String playlistId = shortcut.getStringExtra("playlist");
             if (playlistId == null)return;
@@ -86,14 +145,36 @@ public class UbarCDC extends Activity {
         }
     }
 
+    private Cursor queryAlbumStore() {
+        try {
+            return getContentResolver().query(Uri.parse("content://com.google.android.music.MusicContent/album/store"),
+                    new String[]{"album_name", "album_artist", "StoreAlbumId", "album_id"}, null, null, "album_name");
+        } catch (Throwable t) {
+            Log.e(TAG, "queryAlbumStore() failed: "+t.toString());
+        }
+        return null;
+    }
+
+    private Cursor queryAlbumArtists() {
+        try {
+            return getContentResolver().query(Uri.parse("content://com.google.android.music.MusicContent/album/artists"),
+                    new String[]{"album_artist", "album_artist_id"}, null, null, "album_artist");
+        } catch (Throwable t) {
+            Log.e(TAG, "queryAlbumArtists() failed: "+t.toString());
+        }
+        return null;
+    }
     private void action() {
+//        Cursor cursor = queryAlbumStore();
         Context context = this;
         Cursor cursor = null;
         try {
             cursor = context.getContentResolver().query(
-                    Uri.parse("content://com.google.android.music.MusicContent/playlists"),
+//                    Uri.parse("content://com.google.android.music.MusicContent/playlists"),
 //                    Uri.parse("content://com.google.android.music.MusicContent/album"),
 //                    Uri.parse("content://com.google.android.music.MusicContent/radio_stations"),
+                    Uri.parse("content://com.google.android.music.MusicContent/search/search_suggest_query/Lana"),
+//                    new String[]{"_id"},
                     null,
                     null,
                     null,
@@ -108,6 +189,7 @@ public class UbarCDC extends Activity {
             return;
         }
 
+        int rows = 0;
         try {
             if (cursor.moveToFirst()) {
                 final String[] columnNames = cursor.getColumnNames();
@@ -124,11 +206,13 @@ public class UbarCDC extends Activity {
 //                    entries.add(new PlaylistEntry(id, name));
                     Log.d(TAG, "Row[n]: " + TextUtils.join(",", values));
                     cursor.moveToNext();
+                    rows++;
                 }
             }
         } finally {
             cursor.close();
         }
-
+        if (rows>0)
+            Log.d(TAG, "received ["+rows+"] rows");
     }
 }
