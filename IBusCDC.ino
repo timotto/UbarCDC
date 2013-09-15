@@ -17,6 +17,13 @@
 //Ignition status, Pos1_Acc
 //80 04 BF 11 01 2B
 //
+// Display off
+// 46 05 FF D5 01 01 69
+// Display on
+// 46 05 FF D5 01 00 68
+// 
+#define IBUS_CID         0x46
+#define IBUS_LOC         0xFF
 #define BTN_BMBT_LEFT    0x4810
 #define BTN_BMBT_RIGHT   0x4800
 #define BTN_BMBT_CD1     0x4811
@@ -41,6 +48,7 @@ IBUS_Protocol infotainmentBus(_ibus_tx);
 IBUS_Frame *rxFrame;
 bool inAux = true;
 bool ignition = true;
+bool displayOpen = true;
 
 void cdc_setup() {
   ibus_serial.begin(9600, SERIAL_8E1);
@@ -67,6 +75,7 @@ void cdc_onResume() {
     EEPROM.read(addr++) == 'r' && 
     EEPROM.read(addr++) == 'C') {
     inAux = EEPROM.read(addr++);
+    displayOpen = EEPROM.read(addr++);
   }
   cdc_setPlaying(inAux);
   cdc_setActive(inAux);
@@ -97,6 +106,13 @@ void _ibus_handleFrame() {
 //  DEBUG_CDC("]\n");
 
   uint8_t *frameData = rxFrame->data();
+  
+  if (from == IBUS_CID && to == IBUS_LOC && dlen == 3 && frameData[0] == 0xD5 && frameData[1] == 0x01) {
+    displayOpen = frameData[2] == 0x00;
+    _ibus_persistState();
+    return;
+  }
+  
   switch(to){
     case 0x3b: // GT
 //      DEBUG_CDC("to GT\n");
@@ -107,13 +123,6 @@ void _ibus_handleFrame() {
             bool match = true;
             for(int i=0;i<6;i++)
               if (frameData[i] != inAuxData[i]) {
-//                DEBUG_CDC("mismatch on i=");
-//                DEBUG_CDC(i, DEC);
-//                DEBUG_CDC(": ");
-//                DEBUG_CDC(frameData[i], DEC);
-//                DEBUG_CDC(" vs ");
-//                DEBUG_CDC(inAuxData[i], DEC);
-//                DEBUG_CDC("\n");
                 match = false;
                 break;
               }
@@ -122,14 +131,7 @@ void _ibus_handleFrame() {
               cdc_setActive(match);
               cdc_setPlaying(match);
               inAux = match;
-              int addr = 0;
-              // magic
-              EEPROM.write(addr++, 'U');
-              EEPROM.write(addr++, 'b');
-              EEPROM.write(addr++, 'r');
-              EEPROM.write(addr++, 'C');
-              // data
-              EEPROM.write(addr++, inAux);
+              _ibus_persistState();
             }
           }
           return;
@@ -244,6 +246,19 @@ void _ibus_handleButton(uint16_t btn) {
 void _ibus_tx(uint8_t c) {
   ibus_serial.write(c);
 }
+
+void _ibus_persistState() {
+  int addr = 0;
+  // magic
+  EEPROM.write(addr++, 'U');
+  EEPROM.write(addr++, 'b');
+  EEPROM.write(addr++, 'r');
+  EEPROM.write(addr++, 'C');
+  // data
+  EEPROM.write(addr++, inAux);
+  EEPROM.write(addr++, displayOpen);
+}
+
 void bus_tx(uint8_t c) {_ibus_tx(c);}
 #endif
 
