@@ -1,11 +1,12 @@
 UbarCDC
 =======
 
-Arduino based CD changer enhancer for A2DP Bluetooth or SD/MP3 Music Shields
+This is an Arduino based CD changer / AUX-in enhancer for A2DP Bluetooth mediaplayers with a companion app for Android.
 
-The first Sketch will be using either a Roving Network RN-52 (https://www.sparkfun.com/products/11678) or OVC3860 (check eBay) Bluetooth module. The RN-52 features an additional SPP Bluetooth profile, so the CD changer slot buttons on the radio can be used to switch between playlists using a simple app on the Smartphone. 
+The main Sketch is UbarCDC.ino. As of now it supports the Alpine MBus CD changer protocol I found in an 1991 Jaguar XJS as well as IBus integration for a 2005 BMW Z4. 
 
-My first CD changer is an Alpine CHM-S601 using the M-Bus protocol. To connect the 1 wire Bus with ~12V levels to the 5V Arduino I use a L9637d from STMicroelectronics that I soldered onto some SSOP like breakout board. The RN-52 will suffer from the same fate, and I hope one day I'll be able to make my own PCBs. The M-Bus protocol is handled by the MBus Arduino library by Olstyle (https://github.com/Olstyle/MBus). Most functions are self explaining and can be easily changed to reflect another kind of CDC protocol. Some time later I will extend this to the BMW I-Bus protocol and some VW radios too.
+The Alpine implementation is installed in parallel to an existing CD changer. Insert a self burnt disc with 15 tracks, each 5 minutes long and without a gap. The MBus implementation will detect this disc and initiate the A2DP playback.
 
-The RN-52 outputs differential analog, SPDIF or I2S. The differential analog output requires an Op-Amp to use it on the car stereo and I already failed miserably soldering one without really knowing what I was doing. So I settled for SPDIF and bought one of those Toslink & Coaxial SPDIF to Analog converters. If I remove the connectors it makes a perfectly small PCB with all the electronics already in place.
+The BMW IBus implementation is different. UbarCDC is connected to AUX-in of the radio unit as well as the IBus. When you select AUX in as the audio source you can change tracks with the radio buttons and steering wheel controls. If you are using an Android device you should also install the Android app as this allows you to assign Albums and Playlists to the 1-6 disc select buttons.
 
+The Sketch includes drivers for an OVC 3860 and RN-52 bluetooth module. The RN52 implementation is slightly more advanced, as the OVC 3860 lacks bi-directional SPP support.
