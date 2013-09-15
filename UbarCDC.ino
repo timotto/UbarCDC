@@ -38,6 +38,7 @@ void setup() {
   Serial.begin(9600);
   cdc_setup();
   bt_setup();
+  onResume();
   DEBUG("[UCDC] started\n");
 }
 
