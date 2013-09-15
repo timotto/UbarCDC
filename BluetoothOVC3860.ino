@@ -13,9 +13,9 @@ void bt_setup(){
 void bt_loop(){
   char *line;
   if ((line = btrl.feed(&Serial3))) {
-    Serial.print("Line from BT: [");
-    Serial.print(line);
-    Serial.println("]");
+//    Serial.print("Line from BT: [");
+//    Serial.print(line);
+//    Serial.println("]");
   }
 }
 
