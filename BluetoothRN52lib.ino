@@ -51,6 +51,7 @@ void bt_setup(){
 }
 
 uint32_t lastHi2Lo = 0;
+uint32_t triggerIn = 0;
 int gpio2 = 0;
 void bt_loop() {
 
@@ -71,12 +72,19 @@ void bt_loop() {
         // last hi to lo transision is less than 150ms, this is a state change
         
         stateChanged = true;
-        rn52.onGPIO2();
-        
+        triggerIn = now + 100;
+        if(!triggerIn)triggerIn=1;
       }
     } else {
       // pin went lo
       lastHi2Lo = now;
+    }
+  }
+  if (triggerIn) {
+    uint32_t now = millis();
+    if(now >= triggerIn){
+      triggerIn = 0;
+      rn52.onGPIO2();
     }
   }
 }
