@@ -2,7 +2,11 @@ package com.ubergrund.UbarCDC;
 
 import android.app.Service;
 import android.bluetooth.*;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ParcelUuid;
 import android.util.Log;
@@ -27,6 +31,11 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
 
     private static final String TAG = "UbarCDC/UbarCDCService";
 
+    private static final int MSG_PING = 0x10;
+    private static final int MSG_PONG = 0x11;
+    private static final int MSG_DISCSELECT = 0x20;
+    private static final int MSG_TRACKINFO = 0x80;
+
     private BluetoothDevice connectedDevice = null;
     private UUID sppUuid = null;
     private BluetoothSocket sppSocket = null;
@@ -39,6 +48,11 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
         Log.d(TAG, "onCreate");
         super.onCreate();
         BluetoothAdapter.getDefaultAdapter().getProfileProxy(this, this, BluetoothProfile.A2DP);
+        final IntentFilter filter = new IntentFilter();
+        filter.addAction("com.android.music.metachanged");
+        filter.addAction("com.android.music.playstatechanged");
+        filter.addAction("com.android.music.playbackcomplete");
+        registerReceiver(systemMusicReceiver, filter);
     }
 
     @Override
@@ -46,6 +60,7 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
         Log.d(TAG, "onDestroy");
         if (a2dp != null)
             BluetoothAdapter.getDefaultAdapter().closeProfileProxy(BluetoothProfile.A2DP, a2dp);
+        unregisterReceiver(systemMusicReceiver);
         super.onDestroy();
     }
 
@@ -198,8 +213,125 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
         }
     }
 
-    private static final int MSG_PING = 0x10;
-    private static final int MSG_PONG = 0x11;
-    private static final int MSG_DISCSELECT = 0x20;
-    private static final int MSG_TRACKINFO = 0x80;
+    private BroadcastReceiver systemMusicReceiver = new BroadcastReceiver() {
+
+        private final String TAG = "UbarCDC/MusicUpdateReceiver";
+        private StatusInfo lastInfo = null;
+
+        @Override
+        public final void onReceive(Context context, Intent intent) {
+
+            if (out==null){
+                Log.d(TAG, "no output stream");
+                return;
+            }
+
+            String action = intent.getAction();
+            Bundle bundle = intent.getExtras();
+
+            if (action == null || bundle == null) {
+                Log.e(TAG, "Got null action or null bundle");
+                return;
+            }
+
+            try {
+                parseIntent(bundle); // might throw
+            } catch (IllegalArgumentException e) {
+                Log.i(TAG, "Got a bad track, ignoring it (" + e.getMessage() + ")");
+            }
+
+        }
+
+        protected void parseIntent(Bundle bundle)
+                throws IllegalArgumentException {
+
+            if (bundle.containsKey("playstate")) {
+//                boolean oldPlaystate = playing;
+//                playing = bundle.getBoolean("playstate");
+//                playingKnown = true;
+//                Log.d(TAG, "playstate new [" + playing + "] old [" + oldPlaystate + "]");
+//                if (playing != oldPlaystate) {
+//                    callbackHandler.sendEmptyMessage(MSG_PLAYING_CHANGED);
+//                }
+            }
+
+            final StatusInfo newInfo = new StatusInfo(
+                    bundle.getString("track"),
+                    bundle.getString("artist"),
+                    bundle.getString("album")
+            );
+            if (newInfo.equals(lastInfo))return;
+            if (out != null) {
+                lastInfo = newInfo;
+                Log.d(TAG, "newInfo ["+newInfo+"]");
+
+                try {
+                    out.writeByte(MSG_TRACKINFO);
+                    char[] chars = lastInfo.title.toCharArray();
+                    for(char c : chars)
+                        out.writeByte(c);
+                    out.writeByte(0);
+                    chars = lastInfo.artist.toCharArray();
+                    for(char c : chars)
+                        out.writeByte(c);
+                    out.writeByte(0);
+                    chars = lastInfo.album.toCharArray();
+                    for(char c : chars)
+                        out.writeByte(c);
+                    out.writeByte(0);
+                    out.flush();
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to send track info", e);
+
+                }
+            }
+//            boolean send = false;
+//            if (!newInfo.equals(latestStatusInfo)) {
+//                send = true;
+//            } else {
+//                Log.d(TAG, "same info");
+//                if ((latestStatusInfoSentTime + 500) > System.currentTimeMillis()) {
+//                    send = true;
+//                }
+//            }
+
+//            if (send) {
+//                latestStatusInfoSentTime = System.currentTimeMillis();
+//                latestStatusInfo = newInfo;
+//                callbackHandler.sendEmptyMessage(MSG_STATUS_UPDATE);
+//            }
+        }
+    };
+
+    public static class StatusInfo {
+        public final String title;
+        public final String artist;
+        public final String album;
+
+        public StatusInfo(String title, String artist, String album) {
+            this.title = nullSafeSet(title);
+            this.artist = nullSafeSet(artist);
+            this.album = nullSafeSet(album);
+        }
+
+        private static String nullSafeSet(String value) {
+            return value!=null?value:"";
+        }
+
+        @Override
+        public String toString() {
+            return "{artist="+artist+", album="+album+", track="+title+"}";
+        }
+
+        @Override
+        public int hashCode() {
+            return title.hashCode() ^ artist.hashCode() ^ album.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof StatusInfo && hashCode() == o.hashCode();
+        }
+    }
+
 }

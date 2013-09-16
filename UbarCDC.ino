@@ -3,7 +3,7 @@
 
 #define CDC_IBUS
 #define BT_RN52_LIB
-#define SPP_JSON
+#define SPP_ANDROID
 //#define CDC_MBUS
 //#define BT_RN52
 //#define BT_OVC3860

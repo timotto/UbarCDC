@@ -26,6 +26,9 @@ void cdc_loop() {
   mBus.loop();
 }
 
+void cdc_displayTrackinfo(char* title, char* artist, char* album) {
+}
+
 // called from mBus.loop() method
 void onMbusMessage(uint64_t msg, int len) {
 //  Serial.print("[MBUS] ");

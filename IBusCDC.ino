@@ -92,6 +92,83 @@ void cdc_onPause() {
   onPause();
 }
 
+char* lastTitle = 0;
+char* lastArtist = 0;
+char* lastAlbum = 0;
+
+void cdc_displayTrackinfo(char* title, char* artist, char* album) {
+  lastTitle = title;
+  lastArtist = artist;
+  lastAlbum = album;
+  _cdc_sendTrackinfo();
+}
+
+void _cdc_sendTrackinfo() {
+  if(!displayOpen || !inAux || !(lastTitle && lastArtist && lastAlbum))return;
+
+  // 2012-08-25 19:41:37.968:  68 11 3B A5 63 01 41 4D 6F 6F 6E 62 6F 6F 74 69 63 61 9A
+  // 2012-08-25 19:41:37.968:  ! RAD  --> GT  : Screen Text, Layout=0x63:  FC2=0x01  Fld1,PartTx="Moonbootica"
+  uint8_t ll = strlen(lastTitle) + 6;
+  uint8_t ck = 0;
+  _ibus_tx(0x68); ck ^= 0x68;
+  _ibus_tx(ll); ck ^= ll;
+  _ibus_tx(0x3b); ck ^= 0x3b;
+  _ibus_tx(0xa5); ck ^= 0xa5;
+  _ibus_tx(0x63); ck ^= 0x63;
+  _ibus_tx(0x01); ck ^= 0x01;
+  _ibus_tx(0x41); ck ^= 0x41;
+  for(int i=0;i<ll-6;i++) {
+    _ibus_tx(lastTitle[i]);
+    ck ^= lastTitle[i];
+  }
+  _ibus_tx(ck);
+  
+  // 2012-08-25 19:41:37.996:  68 17 3B A5 63 01 42 34 34 31 30 30 20 28 69 6E 74 65 72 6C 75 64 65 29 AD
+  // 2012-08-25 19:41:37.996:  ! RAD  --> GT  : Screen Text, Layout=0x63:  FC2=0x01  Fld2,PartTx="44100 (interlude)"
+  ll = strlen(lastArtist) + 6;
+  ck = 0;
+  _ibus_tx(0x68); ck ^= 0x68;
+  _ibus_tx(ll); ck ^= ll;
+  _ibus_tx(0x3b); ck ^= 0x3b;
+  _ibus_tx(0xa5); ck ^= 0xa5;
+  _ibus_tx(0x63); ck ^= 0x63;
+  _ibus_tx(0x01); ck ^= 0x01;
+  _ibus_tx(0x42); ck ^= 0x42;
+  for(int i=0;i<ll-6;i++) {
+    _ibus_tx(lastArtist[i]);
+    ck ^= lastArtist[i];
+  }
+  _ibus_tx(ck);
+  
+  // 2012-08-25 19:41:38.021:  68 17 3B A5 63 01 43 4D 6F 6F 6E 6C 69 67 68 74 20 57 65 6C 66 61 72 65 F3
+  // 2012-08-25 19:41:38.021:  ! RAD  --> GT  : Screen Text, Layout=0x63:  FC2=0x01  Fld3,PartTx="Moonlight Welfare"
+  ll = strlen(lastAlbum) + 6;
+  ck = 0;
+  _ibus_tx(0x68); ck ^= 0x68;
+  _ibus_tx(ll); ck ^= ll;
+  _ibus_tx(0x3b); ck ^= 0x3b;
+  _ibus_tx(0xa5); ck ^= 0xa5;
+  _ibus_tx(0x63); ck ^= 0x63;
+  _ibus_tx(0x01); ck ^= 0x01;
+  _ibus_tx(0x43); ck ^= 0x43;
+  for(int i=0;i<ll-6;i++) {
+    _ibus_tx(lastAlbum[i]);
+    ck ^= lastAlbum[i];
+  }
+  _ibus_tx(ck);
+  
+  // 2012-08-25 19:41:38.048:  68 06 3B A5 63 00 00 93
+  // 2012-08-25 19:41:38.048:  ! RAD  --> GT  : Screen Text, Layout=0x63:  FC2=0x00  Fld0,EndTx=""
+  _ibus_tx(0x68);
+  _ibus_tx(0x06);
+  _ibus_tx(0x3b);
+  _ibus_tx(0xa5);
+  _ibus_tx(0x63);
+  _ibus_tx(0x00);
+  _ibus_tx(0x00);
+  _ibus_tx(0x93);
+}
+
 const char inAuxData[] = {0x23, 0x62, 0x10, 'A', 'U', 'X'};
 void _ibus_handleFrame() {
   
@@ -130,6 +207,10 @@ void _ibus_handleFrame() {
               DEBUG_CDC(match?"ENABLE (in AUX)":"DISABLE (not in AUX)");
               cdc_setActive(match);
               cdc_setPlaying(match);
+              
+              if (inAux)
+                _cdc_sendTrackinfo();
+                
               inAux = match;
               _ibus_persistState();
             }
