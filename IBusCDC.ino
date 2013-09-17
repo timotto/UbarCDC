@@ -1,15 +1,13 @@
 #ifdef CDC_IBUS
 
+// http://github.com/timotto/IBUS_Protocol
+#include <IBUS_Protocol.h>
+// http://pjrc.com/
+#include <AltSoftSerial.h>
+#include <EEPROM.h>
+
 //#define DEBUG_CDC(x) Serial.print(x)
 #define DEBUG_CDC
-
-// SoftwareSerial
-#define CDC_BUS_TX  12
-#define CDC_BUS_RX  11
-
-#include <EEPROM.h>
-#include <IBUS_Protocol.h>
-#include <AltSoftSerial.h>
 
 //Ignition status, Off:
 //80 04 BF 11 00 2A
@@ -22,8 +20,18 @@
 // Display on
 // 46 05 FF D5 01 00 68
 // 
+
+// Wait for IBUS_TX_WAIT milliseconds after receiving the last frame before sending
+#define IBUS_TX_WAIT     50
+
+#define IBUS_GT          0x3b
 #define IBUS_CID         0x46
+#define IBUS_MFL         0x50
+#define IBUS_IKE         0x80
+#define IBUS_GLO         0xBF
+#define IBUS_BMBT        0xF0
 #define IBUS_LOC         0xFF
+
 #define BTN_BMBT_LEFT    0x4810
 #define BTN_BMBT_RIGHT   0x4800
 #define BTN_BMBT_CD1     0x4811
@@ -54,13 +62,17 @@ void cdc_setup() {
   ibus_serial.begin(9600, SERIAL_8E1);
 }
 
+uint32_t lastRx = 0;
 void cdc_loop() {
+  uint32_t now = millis();
   while(ibus_serial.available()) {
-    uint8_t c = ibus_serial.read();
-    infotainmentBus.feed(c);
+    lastRx = now;
+    infotainmentBus.feed(ibus_serial.read());
     if ( (rxFrame = infotainmentBus.getFrame()) != NULL) {
       _ibus_handleFrame();
     }
+  }
+  if (lastRx + 50 >= now) {
   }
 }
 
@@ -191,7 +203,7 @@ void _ibus_handleFrame() {
   }
   
   switch(to){
-    case 0x3b: // GT
+    case IBUS_GT: // GT
 //      DEBUG_CDC("to GT\n");
       switch(frameData[0]) {
         case 0x23: // display text
@@ -221,10 +233,10 @@ void _ibus_handleFrame() {
   }
   
   switch(from) {
-    case 0x80: //IKE
+    case IBUS_IKE: //IKE
       DEBUG_CDC("from IKE\n");
       switch(to) {
-        case 0xBF: //GLO
+        case IBUS_GLO: //GLO
 //          DEBUG_CDC("to GLO, len=");
 //          DEBUG_CDC(rxFrame->len());
 //          DEBUG_CDC("\n");
@@ -251,14 +263,14 @@ void _ibus_handleFrame() {
           break;
       }
       break;
-    case 0xF0: //BMBT
+    case IBUS_BMBT:
       switch(frameData[0]) {
         case 0x48: // Button
           _ibus_handleButton(0x4800 | frameData[1]);
           return;
       }
       break;
-    case 0x50: //MFL
+    case IBUS_MFL: //MFL
       switch(frameData[0]) {
         case 0x3B: // Button
           _ibus_handleButton(0x3B00 | frameData[1]);
