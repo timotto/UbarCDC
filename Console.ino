@@ -5,7 +5,7 @@ ReadLine con_readLine;
 void con_loop() {
   char *line;
 
-  if (line = con_readLine.feed(&Serial)) {
+  if ((line = con_readLine.feed(&Serial))) {
     if (0 == strcmp("setup", line)) {
       bt_moduleSetup();
     } else if (0 == strcmp("visible", line)) {
