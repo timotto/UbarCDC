@@ -48,6 +48,7 @@ void bt_setup(){
   pinMode(13, OUTPUT);
   digitalWrite(13, LOW);
   rn52.onGPIO2();
+  bt_visible();
 }
 
 uint32_t lastHi2Lo = 0;

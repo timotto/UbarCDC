@@ -6,13 +6,15 @@
 
 ReadLine btrl;
 
+void bt_sppTx(uint8_t c) {}
+
 void bt_setup(){
-  Serial3.begin(115200);
+  Serial.begin(115200);
 }
 
 void bt_loop(){
   char *line;
-  if ((line = btrl.feed(&Serial3))) {
+  if ((line = btrl.feed(&Serial))) {
 //    Serial.print("Line from BT: [");
 //    Serial.print(line);
 //    Serial.println("]");
@@ -55,9 +57,9 @@ void bt_disconnect() {
 }
 
 void _bt_ovccmd(const char *cmd) {
-  Serial3.print(BT_O_CMD_PREFIX);
-  Serial3.print(cmd);
-  Serial3.print(BT_O_CMD_POSTFIX);
+  Serial.print(BT_O_CMD_PREFIX);
+  Serial.print(cmd);
+  Serial.print(BT_O_CMD_POSTFIX);
 }
 
 #endif
