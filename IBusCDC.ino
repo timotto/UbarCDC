@@ -27,6 +27,7 @@
 #define IBUS_GT          0x3b
 #define IBUS_CID         0x46
 #define IBUS_MFL         0x50
+#define IBUS_RAD         0x68
 #define IBUS_IKE         0x80
 #define IBUS_GLO         0xBF
 #define IBUS_BMBT        0xF0
@@ -48,6 +49,29 @@
 #define DD_IG_OFF        0x1100
 #define DD_IG_ACC        0x1101
 
+const uint8_t inAuxDataA[] = {0x23, 0x62, 0x10, 0x41, 0x55, 0x58};
+const uint8_t inAuxDataB[] = {0xA5, 0x62, 0x01, 0x00};
+
+uint8_t ibus_msg_title[32] = {0x68, 0x00, 0x3b, 0xa5, 0x63, 0x01, 0x41};
+uint8_t ibus_msg_artist[32] = {0x68, 0x00, 0x3b, 0xa5, 0x63, 0x01, 0x42};
+uint8_t ibus_msg_album[32] = {0x68, 0x00, 0x3b, 0xa5, 0x63, 0x01, 0x43};
+uint8_t ibus_msg_taa[] = {0x68, 0x06, 0x3b, 0xa5, 0x63, 0x00, 0x00, 0x93};
+
+// C0 / 41: C0 = line0, set cursor (1100.0000), 41 = line1 (0100.0001)
+uint8_t ibus_msg_index0[22] = {0x68, 0x14, 0x3B, 0x21, 0x60, 0x01, 0xC0, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00};
+uint8_t ibus_msg_index1[22] = {0x68, 0x14, 0x3B, 0x21, 0x60, 0x01, 0x41, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00};
+uint8_t ibus_msg_index2[22] = {0x68, 0x14, 0x3B, 0x21, 0x60, 0x01, 0x42, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00};
+uint8_t ibus_msg_index3[22] = {0x68, 0x14, 0x3B, 0x21, 0x60, 0x01, 0x43, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00};
+uint8_t ibus_msg_index4[22] = {0x68, 0x14, 0x3B, 0x21, 0x60, 0x01, 0x44, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00};
+uint8_t ibus_msg_index5[22] = {0x68, 0x14, 0x3B, 0x21, 0x60, 0x01, 0x45, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00};
+uint8_t ibus_msg_index6[22] = {0x68, 0x14, 0x3B, 0x21, 0x60, 0x01, 0x46, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00};
+uint8_t ibus_msg_index7[22] = {0x68, 0x14, 0x3B, 0x21, 0x60, 0x01, 0x47, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00};
+uint8_t ibus_msg_i07[8]     = {0x68, 0x06, 0x3B, 0xA5, 0x60, 0x01, 0x00, 0x91};
+
+IBUS_Frame trackInfoFrames[4];
+IBUS_Frame menuContentFrames[9];
+uint8_t inAuxState = 0;
+
 void _ibus_tx(uint8_t c);
 void _ibus_handleFrame();
 
@@ -57,9 +81,25 @@ IBUS_Frame *rxFrame;
 bool inAux = true;
 bool ignition = true;
 bool displayOpen = true;
+bool displayTrackInfoStrings = false;
+bool displayMenuContent = false;
 
 void cdc_setup() {
   ibus_serial.begin(9600, SERIAL_8E1);
+  trackInfoFrames[0].setPacket(ibus_msg_title);
+  trackInfoFrames[1].setPacket(ibus_msg_artist);
+  trackInfoFrames[2].setPacket(ibus_msg_album);
+  trackInfoFrames[3].setPacket(ibus_msg_taa);
+
+  menuContentFrames[0].setPacket(ibus_msg_index0);
+  menuContentFrames[1].setPacket(ibus_msg_index1);
+  menuContentFrames[2].setPacket(ibus_msg_index2);
+  menuContentFrames[3].setPacket(ibus_msg_index3);
+  menuContentFrames[4].setPacket(ibus_msg_index4);
+  menuContentFrames[5].setPacket(ibus_msg_index5);
+  menuContentFrames[6].setPacket(ibus_msg_index6);
+  menuContentFrames[7].setPacket(ibus_msg_index7);
+  menuContentFrames[8].setPacket(ibus_msg_i07);
 }
 
 uint32_t lastRx = 0;
@@ -72,7 +112,18 @@ void cdc_loop() {
       _ibus_handleFrame();
     }
   }
-  if (lastRx + 50 >= now) {
+  if (now >= (lastRx + 50)) {
+    if (displayMenuContent) {
+      displayMenuContent = false;
+      for(int i=0;i<9;i++)
+        infotainmentBus.sendFrame(&(menuContentFrames[i]));
+    }
+    if (displayTrackInfoStrings) {
+      displayTrackInfoStrings = false;
+      for(int i=0;i<4;i++) {
+        infotainmentBus.sendFrame(&(trackInfoFrames[i]));
+      }
+    }
   }
 }
 
@@ -104,95 +155,83 @@ void cdc_onPause() {
   onPause();
 }
 
-char* lastTitle = 0;
-char* lastArtist = 0;
-char* lastAlbum = 0;
-
-void cdc_displayTrackinfo(char* title, char* artist, char* album) {
-  lastTitle = title;
-  lastArtist = artist;
-  lastAlbum = album;
-  _cdc_sendTrackinfo();
+void cdc_fetchTrackinfoString(uint8_t **dst, uint8_t index, uint8_t *maxLength) {
+  uint8_t* msg;
+  switch(index) {
+    case 0:
+    case 1:
+    case 2:
+      *maxLength = 24;
+      msg = _cdc_trackInfoString(index);
+      msg[1] = 0;
+      *dst = &(msg[7]);
+      break;
+    default:
+      *dst = 0;
+      *maxLength = 0;
+      break;
+  }
 }
 
-void _cdc_sendTrackinfo() {
-  if(!displayOpen || !inAux || !(lastTitle && lastArtist && lastAlbum))return;
-
-  // 2012-08-25 19:41:37.968:  68 11 3B A5 63 01 41 4D 6F 6F 6E 62 6F 6F 74 69 63 61 9A
-  // 2012-08-25 19:41:37.968:  ! RAD  --> GT  : Screen Text, Layout=0x63:  FC2=0x01  Fld1,PartTx="Moonbootica"
-  uint8_t ll = strlen(lastTitle) + 6;
+void cdc_saveTrackinfoString(uint8_t index, uint8_t length) {
+  uint8_t* msg = _cdc_trackInfoString(index);
+  if (msg == 0)return;
+  msg[1] = length + 6;
+  
   uint8_t ck = 0;
-  _ibus_tx(0x68); ck ^= 0x68;
-  _ibus_tx(ll); ck ^= ll;
-  _ibus_tx(0x3b); ck ^= 0x3b;
-  _ibus_tx(0xa5); ck ^= 0xa5;
-  _ibus_tx(0x63); ck ^= 0x63;
-  _ibus_tx(0x01); ck ^= 0x01;
-  _ibus_tx(0x41); ck ^= 0x41;
-  for(int i=0;i<ll-6;i++) {
-    _ibus_tx(lastTitle[i]);
-    ck ^= lastTitle[i];
-  }
-  _ibus_tx(ck);
-  
-  // 2012-08-25 19:41:37.996:  68 17 3B A5 63 01 42 34 34 31 30 30 20 28 69 6E 74 65 72 6C 75 64 65 29 AD
-  // 2012-08-25 19:41:37.996:  ! RAD  --> GT  : Screen Text, Layout=0x63:  FC2=0x01  Fld2,PartTx="44100 (interlude)"
-  ll = strlen(lastArtist) + 6;
-  ck = 0;
-  _ibus_tx(0x68); ck ^= 0x68;
-  _ibus_tx(ll); ck ^= ll;
-  _ibus_tx(0x3b); ck ^= 0x3b;
-  _ibus_tx(0xa5); ck ^= 0xa5;
-  _ibus_tx(0x63); ck ^= 0x63;
-  _ibus_tx(0x01); ck ^= 0x01;
-  _ibus_tx(0x42); ck ^= 0x42;
-  for(int i=0;i<ll-6;i++) {
-    _ibus_tx(lastArtist[i]);
-    ck ^= lastArtist[i];
-  }
-  _ibus_tx(ck);
-  
-  // 2012-08-25 19:41:38.021:  68 17 3B A5 63 01 43 4D 6F 6F 6E 6C 69 67 68 74 20 57 65 6C 66 61 72 65 F3
-  // 2012-08-25 19:41:38.021:  ! RAD  --> GT  : Screen Text, Layout=0x63:  FC2=0x01  Fld3,PartTx="Moonlight Welfare"
-  ll = strlen(lastAlbum) + 6;
-  ck = 0;
-  _ibus_tx(0x68); ck ^= 0x68;
-  _ibus_tx(ll); ck ^= ll;
-  _ibus_tx(0x3b); ck ^= 0x3b;
-  _ibus_tx(0xa5); ck ^= 0xa5;
-  _ibus_tx(0x63); ck ^= 0x63;
-  _ibus_tx(0x01); ck ^= 0x01;
-  _ibus_tx(0x43); ck ^= 0x43;
-  for(int i=0;i<ll-6;i++) {
-    _ibus_tx(lastAlbum[i]);
-    ck ^= lastAlbum[i];
-  }
-  _ibus_tx(ck);
-  
-  // 2012-08-25 19:41:38.048:  68 06 3B A5 63 00 00 93
-  // 2012-08-25 19:41:38.048:  ! RAD  --> GT  : Screen Text, Layout=0x63:  FC2=0x00  Fld0,EndTx=""
-  _ibus_tx(0x68);
-  _ibus_tx(0x06);
-  _ibus_tx(0x3b);
-  _ibus_tx(0xa5);
-  _ibus_tx(0x63);
-  _ibus_tx(0x00);
-  _ibus_tx(0x00);
-  _ibus_tx(0x93);
+  int end = msg[1] + 1;
+  for(int i=0;i<end;i++)
+    ck ^= msg[i];
+  msg[end] = ck;
 }
 
-const char inAuxData[] = {0x23, 0x62, 0x10, 'A', 'U', 'X'};
+void cdc_displayTrackinfoStrings() {
+  if(!displayOpen || !inAux
+     || ibus_msg_title[1] == 0 || ibus_msg_artist[1] == 0 || ibus_msg_album[1] == 0)return;
+     
+  displayTrackInfoStrings = true;
+}
+
+uint8_t* _cdc_trackInfoString(int index) {
+  switch(index) {
+    case 0:
+      return ibus_msg_title;
+    case 1:
+      return ibus_msg_artist;
+    case 2:
+      return ibus_msg_album;
+  }
+  return 0;
+}
+
+void cdc_fetchDirectoryString(uint8_t **dst, uint8_t index, uint8_t *maxLength) {
+  *maxLength = 14;
+  uint8_t *msg = menuContentFrames[index].packet();
+  *dst = &(msg[7]);
+  memset(dst, 0x20, *maxLength);
+}
+
+void cdc_saveDirectoryString(uint8_t index, uint8_t length) {
+  uint8_t *msg = menuContentFrames[index].packet();
+  msg[1] = length + 6;
+  
+  uint8_t ck = 0;
+  int end = msg[1] + 1;
+  for(int i=0;i<end;i++)
+    ck ^= msg[i];
+  msg[end] = ck;
+}
+
+void cdc_displayDirectoryStrings() {
+  if(!displayOpen || !inAux)return;
+  displayMenuContent = true;
+}
+
 void _ibus_handleFrame() {
   
   uint8_t from = rxFrame->from();
   uint8_t to = rxFrame->to();
   uint8_t dlen = rxFrame->len();
-
-//  DEBUG_CDC("IBus Frame from [");
-//  DEBUG_CDC(from, HEX);
-//  DEBUG_CDC("] to [");
-//  DEBUG_CDC(to, HEX);
-//  DEBUG_CDC("]\n");
 
   uint8_t *frameData = rxFrame->data();
   
@@ -202,34 +241,53 @@ void _ibus_handleFrame() {
     return;
   }
   
-  switch(to){
-    case IBUS_GT: // GT
-//      DEBUG_CDC("to GT\n");
-      switch(frameData[0]) {
-        case 0x23: // display text
-//          DEBUG_CDC("display text\n");
-          if (dlen >= 5) { // ll >= 7!
-            bool match = true;
-            for(int i=0;i<6;i++)
-              if (frameData[i] != inAuxData[i]) {
-                match = false;
-                break;
-              }
-            if (match != inAux) {
-              DEBUG_CDC(match?"ENABLE (in AUX)":"DISABLE (not in AUX)");
-              cdc_setActive(match);
-              cdc_setPlaying(match);
-              
-              if (inAux)
-                _cdc_sendTrackinfo();
-                
-              inAux = match;
-              _ibus_persistState();
-            }
-          }
-          return;
+  if (inAuxState == 1 && from == IBUS_GT && to == IBUS_RAD && frameData[0] == 0x22 && dlen == 3) {
+    inAuxState = 0;
+    if (frameData[2] == 0x06) {
+      // 7 confirmed messages, most likely the blank AUX screen
+      if (!inAux) {
+        inAux = true;
+        inAuxState = 0;
+        cdc_setActive(true);
+        cdc_setPlaying(true);
+        
+        _ibus_persistState();
       }
-      break;
+      cdc_displayTrackinfoStrings();
+    } else {
+      // some other screen
+    }
+  }
+  
+  if (from == IBUS_RAD && to == IBUS_GT && frameData[0] == 0x23) {
+    bool outOfAux = false;
+    if (dlen == 6) {
+      bool match = true;
+      for(int i=0;i<6;i++)
+        if (frameData[i] != inAuxDataA[i]) {
+          match = false;
+          break;
+        }
+      if (match != inAux) {
+        if (match) {
+          inAuxState = 1;
+        } else {
+          outOfAux = true;
+        }
+      }
+    } else {
+      outOfAux = true;
+    }
+    
+    if (outOfAux) {
+      inAux = false;
+      inAuxState = 0;
+      cdc_setActive(false);
+      cdc_setPlaying(false);
+      
+      _ibus_persistState();
+    }
+    return;
   }
   
   switch(from) {

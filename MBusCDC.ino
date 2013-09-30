@@ -1,9 +1,9 @@
 #ifdef CDC_MBUS
 
-// https://github.com/rabinath/AsyncMBus
-#include <AsyncMBus.h>
 // http://playground.arduino.cc/code/timer1
 #include <TimerOne.h>
+// https://github.com/rabinath/AsyncMBus
+#include <AsyncMBus.h>
 
 // custom bitbanger
 #define CDC_BUS_TX  7
@@ -28,6 +28,24 @@ void cdc_loop() {
 
 void cdc_displayTrackinfo(char* title, char* artist, char* album) {
 }
+void cdc_fetchTrackinfoString(uint8_t **dst, uint8_t index, uint8_t *maxLength) {
+  *dst = 0;
+  *maxLength = 0;
+}
+void cdc_saveTrackinfoString(uint8_t index, uint8_t length) {
+}
+void cdc_displayTrackinfoStrings() {
+}
+
+void cdc_fetchDirectoryString(uint8_t **dst, uint8_t index, uint8_t *maxLength) {
+  *dst = 0;
+  *maxLength = 0;
+}
+void cdc_saveDirectoryString(uint8_t index, uint8_t length) {
+}
+void cdc_displayDirectoryStrings() {
+}
+
 
 // called from mBus.loop() method
 void onMbusMessage(uint64_t msg, int len) {
