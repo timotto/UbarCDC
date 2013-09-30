@@ -6,13 +6,32 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 /**
+ * Uses the Android Accessibility Service to "remote-control" the
+ * Google Music App, as there seems no way to open an album and
+ * also start playing.
+ *
+ * UbarCDC
+ * Copyright (C) 2013 Tim Otto
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  * Created with IntelliJ IDEA.
  * User: Tim
  * Date: 9/15/13
@@ -24,47 +43,53 @@ public class UbarAccService extends AccessibilityService {
     /**
      * ACTION!!
      */
+    public static final String EXTRA_GEYGUARD_ENABLE = "keyguard_enable";
     public static final String EXTRA_ACTION = "action";
     public static final String VALUE_PLAY = "play";
     public static final String VALUE_RADIO = "radio";
     public static final String VALUE_SHUFFLE = "shuffle";
 
-    private boolean armed = true;
+    private int inspectorState = 0;
+    private AccessibilityNodeInfo playView = null;
+    private AccessibilityNodeInfo radioView = null;
+    private AccessibilityNodeInfo shuffleView = null;
+    private AccessibilityNodeInfo menuView = null;
+
+    private boolean armed = false;
     private String action = null;
-
-    private final Handler actionHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-//            Log.d(TAG, "handleMessage()");
-            armed=false;
-            if (VALUE_PLAY.equals(action))
-                playView.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-            else if (VALUE_RADIO.equals(action))
-                radioView.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-            else if (VALUE_SHUFFLE.equals(action))
-                shuffleView.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-
-            playView.recycle();
-            radioView.recycle();
-            shuffleView.recycle();
-            playView=null;
-            radioView=null;
-            shuffleView=null;
-        }
-    };
+    private boolean reEnableKeyguard = false;
 
     private void onButtonsFound() {
-//        actionHandler.removeMessages(0);
-//        Log.d(TAG, "onButtonsFound()");
-//        Log.d(TAG, playView.toString());
-//        Log.d(TAG, radioView.toString());
-//        Log.d(TAG, shuffleView.toString());
-//        actionHandler.sendEmptyMessageDelayed(0, 250);
-        actionHandler.handleMessage(null);
+        Log.d(TAG, "onButtonsFound()");
+        armed=false;
+        if (VALUE_PLAY.equals(action))
+            playView.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        else if (VALUE_RADIO.equals(action))
+            radioView.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        else if (VALUE_SHUFFLE.equals(action))
+            shuffleView.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+
+        performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+
+        final Intent intent = new Intent(UbarAccService.this, GoogleMusicHelperService.class);
+        intent.setAction(GoogleMusicHelperService.ACTION_FINISH);
+        if (reEnableKeyguard) {
+            Log.d(TAG, "going to re-enable keyguard");
+            intent.putExtra(GoogleMusicHelperService.EXTRA_LOCK, true);
+        }
+        startService(intent);
+
+        playView.recycle();
+        radioView.recycle();
+        shuffleView.recycle();
+        playView=null;
+        radioView=null;
+        shuffleView=null;
+        Log.d(TAG, "done with onButtonsFound()");
     }
 
     private void onMenuFound() {
-//        Log.d(TAG, "onMenuFound()");
+        Log.d(TAG, "onMenuFound()");
         menuView.performAction(AccessibilityNodeInfo.ACTION_CLICK);
     }
 
@@ -85,8 +110,9 @@ public class UbarAccService extends AccessibilityService {
         public void onReceive(Context context, Intent intent) {
             if(intent==null)return;
             action = intent.getStringExtra(EXTRA_ACTION);
+            reEnableKeyguard = intent.getBooleanExtra(EXTRA_GEYGUARD_ENABLE, false);
             armed = (action!=null);
-            Log.d(TAG, armed?"Armed!":"Disarmed!");
+            Log.d(TAG, armed?"Armed!"+(reEnableKeyguard?" + re-enable":""):"Disarmed!");
         }
     };
 
@@ -116,12 +142,6 @@ public class UbarAccService extends AccessibilityService {
 //            Log.e(TAG, "Error", e);
         }
     }
-
-    private int inspectorState = 0;
-    private AccessibilityNodeInfo playView = null;
-    private AccessibilityNodeInfo radioView = null;
-    private AccessibilityNodeInfo shuffleView = null;
-    private AccessibilityNodeInfo menuView = null;
 
     private void resetInspector() {
         inspectorState=0;

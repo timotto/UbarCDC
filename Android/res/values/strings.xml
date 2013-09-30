@@ -4,5 +4,14 @@
     <string name="title_paired_devices">Paired devices</string>
     <string name="no_bluetooth">No Bluetooth available</string>
     <string name="none_paired">No paired devices found</string>
-    <string name="search_hint">Title, artist, album...</string>
+    <string name="search_hint">Title, artist, album…</string>
+
+    <string name="now_playing">Now playing</string>
+    <string name="recent">Recent</string>
+    <string name="suggested">Suggested</string>
+    <string name="radios">Radios</string>
+    <string name="playlists">Playlists</string>
+    <string name="artists">Artists</string>
+    <string name="albums">Albums</string>
+    <string name="settings">Settings</string>
 </resources>

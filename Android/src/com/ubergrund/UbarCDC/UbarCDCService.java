@@ -6,9 +6,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Bundle;
-import android.os.IBinder;
-import android.os.ParcelUuid;
+import android.os.*;
 import android.util.Log;
 
 import java.io.DataInputStream;
@@ -17,6 +15,23 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
+ * UbarCDC
+ * Copyright (C) 2013 Tim Otto
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  * Created with IntelliJ IDEA.
  * User: Tim
  * Date: 8/31/13
@@ -31,10 +46,7 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
 
     private static final String TAG = "UbarCDC/UbarCDCService";
 
-    private static final int MSG_PING = 0x10;
-    private static final int MSG_PONG = 0x11;
-    private static final int MSG_DISCSELECT = 0x20;
-    private static final int MSG_TRACKINFO = 0x80;
+    private MenuProvider menuProvider;
 
     private BluetoothDevice connectedDevice = null;
     private UUID sppUuid = null;
@@ -42,11 +54,16 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
     private boolean shutdown = false;
     private DataOutputStream out;
     private BluetoothA2dp a2dp = null;
+    private SPPDriver sppDriver;
 
     @Override
     public void onCreate() {
         Log.d(TAG, "onCreate");
         super.onCreate();
+
+        sppDriver = new SPPDriver();
+        menuProvider = new MenuProvider(this);
+
         BluetoothAdapter.getDefaultAdapter().getProfileProxy(this, this, BluetoothProfile.A2DP);
         final IntentFilter filter = new IntentFilter();
         filter.addAction("com.android.music.metachanged");
@@ -163,30 +180,27 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
                 Log.d(TAG, "connected!");
                 final DataInputStream in = new DataInputStream(sppSocket.getInputStream());
                 out = new DataOutputStream(sppSocket.getOutputStream());
+                sppDriver.setOut(out);
 
-                out.writeByte(MSG_PING);
-                out.writeByte(0x7f);
-                out.flush();
+                sppDriver.sendPing(0x7f);
 
                 byte arg;
                 while (true) {
                     byte cmd = in.readByte();
 
                     switch (cmd) {
-                        case MSG_PING:
+                        case SPPDriver.MSG_PING:
                             Log.d(TAG, "Got Ping");
                             arg = in.readByte();
-                            out.writeByte(MSG_PONG);
-                            out.writeByte(arg);
-                            out.flush();
+                            sppDriver.sendPong(arg);
                             break;
 
-                        case MSG_PONG:
+                        case SPPDriver.MSG_PONG:
                             Log.d(TAG, "Got Pong");
                             arg = in.readByte();
                             break;
 
-                        case MSG_DISCSELECT:
+                        case SPPDriver.MSG_DISCSELECT:
                             arg = in.readByte();
                             Log.d(TAG, "Got disc select ("+arg+")");
 
@@ -194,9 +208,33 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
 //                            final PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, TAG);
 //                            wl.acquire(10000);
 
-                            final Intent testIntent = new Intent("com.ubergrund.ubarcdc.CDC_EVENT");
+                            final Intent testIntent = new Intent(CDCEventReceiver.ACTION_EVENT);
                             testIntent.putExtra(CDCEventReceiver.EXTRA_BUTTON, String.valueOf(arg));
                             sendBroadcast(testIntent);
+
+                            break;
+
+                        case SPPDriver.MSG_GETDIRECTORY:
+                            long indexId = 0;
+                            indexId |= (in.readByte() << 24);
+                            indexId |= (in.readByte() << 16);
+                            indexId |= (in.readByte() << 8);
+                            indexId |= (in.readByte());
+
+                            int offset = 0;
+                            offset |= in.readByte() << 8;
+                            offset |= in.readByte();
+
+                            int length = 0;
+                            length |= in.readByte() << 8;
+                            length |= in.readByte();
+
+                            Log.d(TAG, "Received directory request, menuId ["+indexId+"], offset ["+offset+"], length ["+length+"]");
+                            final Message m = txHandler.obtainMessage(MSG_SEND_DIRECTORY);
+                            m.obj = indexId;
+                            m.arg1 = offset;
+                            m.arg2 = length;
+                            txHandler.sendMessage(m);
 
                             break;
                     }
@@ -213,10 +251,51 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
         }
     }
 
+    private static final int MSG_SEND_TRACKINFO = 1;
+    private static final int MSG_SEND_DIRECTORY = 2;
+
+    private StatusInfo lastInfo = null;
+
+    private Handler txHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            try {
+                switch (msg.what) {
+                    case MSG_SEND_TRACKINFO:
+                        sppDriver.sendTrackInfo(lastInfo);
+                        break;
+
+                    case MSG_SEND_DIRECTORY:
+
+                        long indexId = (Long)msg.obj;
+
+                        final MenuProvider.Menu menu = menuProvider.get(indexId);
+                        if (menu == null) {
+                            Log.w(TAG, "failed to obtain requested menu ["+indexId+"]");
+                            return;
+                        }
+
+                        int offset = msg.arg1;
+                        int maxLength = msg.arg2;
+                        int length = Math.min(maxLength, menu.length() - offset);
+                        if (length <= 0) {
+                            Log.w(TAG, "requested menu ["+indexId+"] is empty, offset ["+offset+"], maxLength ["+maxLength+"], length ["+menu.length()+"]");
+                            return;
+                        }
+
+                        sppDriver.sendDirectory(menu, offset, length);
+                        break;
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "failed to send data to UbarCDC device", e);
+                // TODO close? restart?
+            }
+        }
+    };
+
     private BroadcastReceiver systemMusicReceiver = new BroadcastReceiver() {
 
         private final String TAG = "UbarCDC/MusicUpdateReceiver";
-        private StatusInfo lastInfo = null;
 
         @Override
         public final void onReceive(Context context, Intent intent) {
@@ -242,8 +321,7 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
 
         }
 
-        protected void parseIntent(Bundle bundle)
-                throws IllegalArgumentException {
+        protected void parseIntent(Bundle bundle) {
 
             if (bundle.containsKey("playstate")) {
 //                boolean oldPlaystate = playing;
@@ -264,74 +342,9 @@ public class UbarCDCService extends Service implements BluetoothProfile.ServiceL
             if (out != null) {
                 lastInfo = newInfo;
                 Log.d(TAG, "newInfo ["+newInfo+"]");
-
-                try {
-                    out.writeByte(MSG_TRACKINFO);
-                    char[] chars = lastInfo.title.toCharArray();
-                    for(char c : chars)
-                        out.writeByte(c);
-                    out.writeByte(0);
-                    chars = lastInfo.artist.toCharArray();
-                    for(char c : chars)
-                        out.writeByte(c);
-                    out.writeByte(0);
-                    chars = lastInfo.album.toCharArray();
-                    for(char c : chars)
-                        out.writeByte(c);
-                    out.writeByte(0);
-                    out.flush();
-                } catch (IOException e) {
-                    Log.e(TAG, "Failed to send track info", e);
-
-                }
+                txHandler.sendEmptyMessage(MSG_SEND_TRACKINFO);
             }
-//            boolean send = false;
-//            if (!newInfo.equals(latestStatusInfo)) {
-//                send = true;
-//            } else {
-//                Log.d(TAG, "same info");
-//                if ((latestStatusInfoSentTime + 500) > System.currentTimeMillis()) {
-//                    send = true;
-//                }
-//            }
-
-//            if (send) {
-//                latestStatusInfoSentTime = System.currentTimeMillis();
-//                latestStatusInfo = newInfo;
-//                callbackHandler.sendEmptyMessage(MSG_STATUS_UPDATE);
-//            }
         }
     };
-
-    public static class StatusInfo {
-        public final String title;
-        public final String artist;
-        public final String album;
-
-        public StatusInfo(String title, String artist, String album) {
-            this.title = nullSafeSet(title);
-            this.artist = nullSafeSet(artist);
-            this.album = nullSafeSet(album);
-        }
-
-        private static String nullSafeSet(String value) {
-            return value!=null?value:"";
-        }
-
-        @Override
-        public String toString() {
-            return "{artist="+artist+", album="+album+", track="+title+"}";
-        }
-
-        @Override
-        public int hashCode() {
-            return title.hashCode() ^ artist.hashCode() ^ album.hashCode();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            return o instanceof StatusInfo && hashCode() == o.hashCode();
-        }
-    }
 
 }
