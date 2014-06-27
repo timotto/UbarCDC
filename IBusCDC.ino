@@ -286,6 +286,8 @@ void _ibus_handleFrame() {
       cdc_setPlaying(false);
       
       _ibus_persistState();
+    } else {
+      cdc_displayTrackinfoStrings();
     }
     return;
   }
